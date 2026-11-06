@@ -1,0 +1,76 @@
+rules_version = '2';
+// RK Study Zone — Firestore security rules
+// Roles (users/{uid}.role): superAdmin | admin | teacher | student
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function isAdmin() { return hasProfile() && me().role in ['admin', 'superAdmin']; }
+    function isStaff() { return hasProfile() && me().role in ['admin', 'superAdmin', 'teacher']; }
+    function portalOwner(portalId) {
+      return get(/databases/$(database)/documents/portals/$(portalId)).data.ownerId == request.auth.uid;
+    }
+    function canEditPortal(portalId) { return isAdmin() || (isStaff() && portalOwner(portalId)); }
+
+    // ---- users/{uid} ----
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+      // self sign-up: only as teacher or student (never admin)
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role in ['teacher', 'student'];
+      // own profile edits cannot change the role; admins can change anything
+      allow update: if isAdmin() ||
+        (signedIn() && request.auth.uid == uid && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // ---- portals/{portalId} (details, status, counters) ----
+    match /portals/{portalId} {
+      allow read: if signedIn();
+      allow create: if isStaff() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isStaff() && resource.data.ownerId == request.auth.uid);
+    }
+
+    // ---- portalContent/{portalId} — DRAFT structure (CMS only) ----
+    match /portalContent/{portalId} {
+      allow read, write: if canEditPortal(portalId);
+    }
+
+    // ---- portalPublished/{portalId} — what students see ----
+    match /portalPublished/{portalId} {
+      allow read: if signedIn();
+      allow write: if canEditPortal(portalId);
+    }
+
+    // ---- portalSyllabus/{portalId} — optional syllabus file (stored in small parts) ----
+    match /portalSyllabus/{portalId} {
+      allow read: if signedIn();
+      allow write: if canEditPortal(portalId);
+      match /parts/{partId} {
+        allow read: if signedIn();
+        allow write: if canEditPortal(portalId);
+      }
+    }
+
+    // ---- enrollments/{uid}_{portalId} ----
+    match /enrollments/{enrollId} {
+      allow read: if signedIn() && (enrollId.matches(request.auth.uid + '_.*') || isAdmin()
+        || (isStaff() && resource.data.ownerId == request.auth.uid));
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && enrollId == request.auth.uid + '_' + request.resource.data.portalId;
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid;
+      allow delete: if isAdmin();
+    }
+
+    // ---- studentData/{uid}_{portalId} — progress, notes, bookmarks, test results ----
+    match /studentData/{docId} {
+      allow read: if signedIn() && (docId.matches(request.auth.uid + '_.*') || isAdmin()
+        || (isStaff() && portalOwner(resource.data.portalId)));
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid
+        && docId == request.auth.uid + '_' + request.resource.data.portalId;
+      allow delete: if isAdmin();
+    }
+  }
+}
