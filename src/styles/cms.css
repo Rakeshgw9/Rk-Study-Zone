@@ -947,10 +947,12 @@
   border: 1px solid var(--c-line);
   border-radius: var(--r-lg);
   padding: 14px;
+  height: 100%;
 }.bld-right {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  height: 100%;
 }.bld-center {
   min-width: 0;
   background: var(--c-panel);
@@ -1510,6 +1512,7 @@
   border: 1px solid var(--c-line);
   border-radius: var(--r-lg);
   padding: 14px;
+  height: 100%;
 }.panel-title {
   display: flex;
   align-items: center;
