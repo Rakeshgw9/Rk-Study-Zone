@@ -1,6 +1,7 @@
 
 import { escapeHtml } from './id'
 import { bridgeScript } from './editBridge'
+import { findSectionGroup } from './sectionFinder'
 
 /**
  * Builds a full HTML document for a sandboxed iframe.
@@ -19,7 +20,8 @@ export function buildFrameDoc({
   copyButtons = false,
   padding = 0,
   editMode = null,
-  imageTools = false
+  imageTools = false,
+  notes = false
 }) {
   const cssLinks = packages
     .filter((p) => p.type === 'css')
@@ -106,6 +108,10 @@ img {
 pre {
   position: relative;
 }
+
+${notes ? `.rk-note-btn{position:absolute;right:10px;bottom:10px;z-index:5;display:inline-flex;gap:6px;align-items:center;font:600 12px Inter,sans-serif;line-height:1;padding:6px 11px;border-radius:999px;border:1px solid rgba(34,211,238,.65);background:rgba(8,20,45,.92);color:#bdeeff;cursor:pointer;opacity:.72;transition:opacity .15s}
+.rk-note-btn:hover,.rk-note-btn:focus-visible{opacity:1}.rk-note-btn.has{background:#0e7490;color:#fff;opacity:1}
+.rk-note-btn svg{width:13px;height:13px}@media print{.rk-note-btn{display:none!important}}` : ''}
 
 ${baseCss}
 </style>
@@ -253,6 +259,75 @@ ${jsLinks}
     };
   });
 
+})();
+</script>
+
+<script>
+(function () {
+  var id = ${JSON.stringify(frameId)};
+
+  /* Lets the lesson page (Save PDF) read the rendered lesson, including anything the scripts built */
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || !d.rkSnap) return;
+    try {
+      var styles = [];
+      document.querySelectorAll('style').forEach(function (s) { styles.push(s.textContent || ''); });
+      var links = [];
+      document.querySelectorAll('link[rel=stylesheet]').forEach(function (l) { if (l.href) links.push(l.href); });
+      var clone = document.body.cloneNode(true);
+      clone.querySelectorAll('script,noscript,.rk-note-btn,.rk-copy').forEach(function (n) { n.remove(); });
+      parent.postMessage({ rkFrame: id, snap: { token: d.rkSnap, styles: styles, links: links, body: clone.innerHTML, bodyClass: document.body.className, bodyStyle: document.body.getAttribute('style') || '' } }, '*');
+    } catch (err) {
+      parent.postMessage({ rkFrame: id, snap: { token: d.rkSnap, error: String(err) } }, '*');
+    }
+  });
+
+  ${notes ? `
+  /* "Add note" button on every section of the lesson */
+  var findSections = ${findSectionGroup.toString()};
+  var btns = [];
+  var keys = {};
+  var PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  function titleOf(el) {
+    var h = el.querySelector('h1,h2,h3,h4,h5');
+    var t = ((h || el).textContent || '').replace(/\\s+/g, ' ').trim();
+    return t.slice(0, 90);
+  }
+  function paint() {
+    btns.forEach(function (b) {
+      var on = !!keys[b.getAttribute('data-rk-note')];
+      b.classList.toggle('has', on);
+      b.lastChild.textContent = on ? 'Note saved' : 'Add note';
+    });
+  }
+  function build() {
+    btns.forEach(function (b) { b.remove(); });
+    btns = [];
+    var secs = findSections(document.body);
+    secs.forEach(function (el, i) {
+      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rk-note-btn';
+      b.setAttribute('data-rk-note', 's' + i);
+      b.innerHTML = PEN + '<span>Add note</span>';
+      b.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        parent.postMessage({ rkFrame: id, note: { key: 's' + i, title: titleOf(el) } }, '*');
+      });
+      el.appendChild(b);
+      btns.push(b);
+    });
+    parent.postMessage({ rkFrame: id, sections: secs.length }, '*');
+    paint();
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (d && d.rkNoteKeys) { keys = {}; d.rkNoteKeys.forEach(function (k) { keys[k] = 1; }); paint(); }
+  });
+  window.addEventListener('load', function () { setTimeout(build, 80); setTimeout(build, 1200); });
+  ` : ''}
 })();
 </script>
 

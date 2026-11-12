@@ -1,7 +1,7 @@
+
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,25 +13,64 @@ const firebaseConfig = {
 }
 
 /*
-  DEMO / LOCAL mode (data in browser localStorage) is used when:
-   - Firebase keys are missing in .env.local, or
-   - VITE_USE_LOCAL_DATA=true, or
-   - the URL contains ?demo=1   (open ?demo=0 to switch back)
+  DEMO / LOCAL mode:
+  - Firebase keys are missing
+  - VITE_USE_LOCAL_DATA=true
+  - URL contains ?demo=1
+
+  Use ?demo=0 to switch back to Firebase mode.
 */
 function demoForced() {
   try {
-    const q = new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '')
-    if (q.get('demo') === '1') localStorage.setItem('rk_force_demo', '1')
-    if (q.get('demo') === '0') localStorage.removeItem('rk_force_demo')
+    const queryString =
+      window.location.search ||
+      window.location.hash.split('?')[1] ||
+      ''
+
+    const params = new URLSearchParams(queryString)
+
+    if (params.get('demo') === '1') {
+      localStorage.setItem('rk_force_demo', '1')
+    }
+
+    if (params.get('demo') === '0') {
+      localStorage.removeItem('rk_force_demo')
+    }
+
     return localStorage.getItem('rk_force_demo') === '1'
-  } catch { return false }
+  } catch {
+    return false
+  }
 }
 
-const hasKeys = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId)
-export const isFirebaseConfigured = hasKeys && import.meta.env.VITE_USE_LOCAL_DATA !== 'true' && !demoForced()
+const hasKeys = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.projectId &&
+  firebaseConfig.appId
+)
+
+export const isFirebaseConfigured =
+  hasKeys &&
+  import.meta.env.VITE_USE_LOCAL_DATA !== 'true' &&
+  !demoForced()
+
 export const firebaseProjectId = firebaseConfig.projectId || ''
 
-export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null
-export const auth = app ? getAuth(app) : null
-export const db = app ? getFirestore(app) : null
-export const storage = app && firebaseConfig.storageBucket ? getStorage(app) : null
+// Firebase App
+export const app = isFirebaseConfigured
+  ? initializeApp(firebaseConfig)
+  : null
+
+// Firebase Authentication
+export const auth = app
+  ? getAuth(app)
+  : null
+
+// Firebase Firestore Database
+export const db = app
+  ? getFirestore(app)
+  : null
+
+// Firebase Storage is no longer used.
+// All media uploads are handled through Cloudinary.
+export const storage = null

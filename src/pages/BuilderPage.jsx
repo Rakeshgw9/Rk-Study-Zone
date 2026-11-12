@@ -45,6 +45,7 @@ import UnitModal from '../components/builder/UnitModal'
 import { ChapterBar, ChapterView, Crumbs, UnitView, Welcome } from '../components/builder/Workspace'
 import { useConfirm } from '../components/ui/Confirm'
 import { useAuth } from '../context/AuthContext'
+import { usePrefs } from '../context/PrefsContext'
 import { useTheme } from '../context/ThemeContext'
 import { BLOCK_TYPES, contentReducer, findBlock, findChapter, newBlock, validateContent } from '../lib/content'
 import { clone, timeAgo, uid } from '../lib/id'
@@ -93,6 +94,7 @@ export default function BuilderPage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const { prefs } = usePrefs()
   const confirm = useConfirm()
   const { theme, toggle } = useTheme()
 
@@ -208,9 +210,9 @@ export default function BuilderPage() {
   useEffect(() => {
     if (!version) return
     setSave((s) => ({ ...s, status: 'unsaved' }))
-    const t = setTimeout(() => doSave(), 1200)
+    const t = setTimeout(() => doSave(), prefs.autosaveMs || 1200)
     return () => clearTimeout(t)
-  }, [version, doSave])
+  }, [version, doSave, prefs.autosaveMs])
 
   // warn before leaving with unsaved edits
   const hasUnsaved = working?.dirty || save.status === 'unsaved' || save.status === 'saving'

@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from './components/Toast'
 import { ConfirmProvider } from './components/ui/Confirm'
 import { AuthProvider } from './context/AuthContext'
+import { PrefsProvider } from './context/PrefsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import AdminLayout from './pages/AdminLayout'
 import DashboardPage from './pages/DashboardPage'
@@ -20,6 +21,7 @@ const Loader = () => <div className="page-loader"><span className="spinner-borde
 export default function App() {
   return (
     <ThemeProvider>
+      <PrefsProvider>
       <AuthProvider>
         <ToastProvider>
           <ConfirmProvider>
@@ -47,6 +49,7 @@ export default function App() {
           </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
+      </PrefsProvider>
     </ThemeProvider>
   )
 }

@@ -1,0 +1,63 @@
+/* RK Study Zone — Changes 9: uploads, profile, settings, syllabus manager, notes, option explanations */
+
+/* ---------- reduce animations preference ---------- */
+.rk-reduce-motion *, .rk-reduce-motion *::before, .rk-reduce-motion *::after {
+  animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important;
+}
+
+/* ---------- Settings ---------- */
+.st-form .ui-label { font-size: .78rem; }
+.st-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--rk-border); }
+.st-row:last-child { border-bottom: 0; }
+.st-row > div:first-child { min-width: 0; }
+.st-row b { display: block; font-weight: 600; font-size: .92rem; }
+.st-row small { display: block; color: var(--rk-muted); font-size: .78rem; margin-top: 2px; }
+.st-switch { cursor: pointer; }
+.st-seg { display: inline-flex; border: 1px solid var(--rk-border-strong); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+.st-seg button { background: transparent; border: 0; color: var(--rk-text); padding: 6px 14px; font-weight: 600; }
+.st-seg button.on { background: var(--rk-primary); color: #fff; }
+
+/* ---------- Syllabus manager popup ---------- */
+.syllabus-box.has-files { border-color: var(--rk-accent); }
+.syl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.syl-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--rk-border); border-radius: 12px; background: rgba(255, 255, 255, .03); flex-wrap: wrap; }
+.syl-ico { width: 38px; height: 38px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: rgba(10, 132, 255, .15); color: var(--rk-accent); font-size: 1.2rem; flex-shrink: 0; }
+.syl-meta { flex: 1 1 160px; display: flex; flex-direction: column; }
+.syl-meta b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .92rem; }
+.syl-meta small { color: var(--rk-muted); }
+.syl-badge { font-size: .72rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: rgba(29, 185, 84, .15); color: #4ade80; }
+.syl-badge.new { background: rgba(255, 154, 31, .16); color: #fbbf24; }
+.syl-empty { text-align: center; padding: 28px 12px; color: var(--rk-muted); }
+.syl-empty svg { font-size: 2rem; margin-bottom: 8px; color: var(--rk-accent); }
+.syl-error { display: flex; gap: 8px; align-items: flex-start; background: rgba(239, 68, 68, .12); border: 1px solid rgba(239, 68, 68, .4); color: #fca5a5; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; font-size: .85rem; }
+.syl-tabs { display: flex; gap: 6px; padding: 0 20px 4px; overflow-x: auto; }
+.syl-tabs button { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; background: rgba(255, 255, 255, .05); border: 1px solid var(--rk-border); color: var(--rk-text); border-radius: 999px; padding: 6px 12px; font-size: .82rem; white-space: nowrap; }
+.syl-tabs button span { overflow: hidden; text-overflow: ellipsis; }
+.syl-tabs button.on { background: var(--rk-primary); border-color: var(--rk-primary); color: #fff; }
+
+/* ---------- Notes ---------- */
+.lesson-block { position: relative; }
+.blk-note-btn { position: absolute; right: 12px; bottom: 12px; z-index: 6; display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--rk-font); line-height: 1; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(34, 211, 238, .65); background: rgba(8, 20, 45, .92); color: #bdeeff; cursor: pointer; opacity: .75; transition: opacity .15s; }
+.blk-note-btn:hover, .blk-note-btn:focus-visible { opacity: 1; }
+.blk-note-btn.has { background: #0e7490; color: #fff; opacity: 1; }
+.lesson-block.table .blk-note-btn { bottom: 4px; }
+@media print { .blk-note-btn { display: none !important; } }
+.notes-current { margin-bottom: 16px; }
+.notes-list-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 10px; }
+.notes-groups { display: flex; flex-direction: column; gap: 14px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+.notes-group h3 { font-size: .95rem; margin: 0 0 8px; color: var(--rk-accent); }
+.notes-group h3 small { color: var(--rk-muted); margin-right: 6px; font-weight: 500; }
+.note-item { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--rk-border); border-left: 3px solid #f59e0b; border-radius: 10px; padding: 9px 12px; margin-bottom: 8px; background: rgba(255, 255, 255, .03); }
+.note-item.chapter { border-left-color: var(--rk-primary); }
+.note-body { flex: 1; min-width: 0; }
+.note-body b { display: block; font-size: .85rem; }
+.note-body p { margin: 3px 0 0; white-space: pre-wrap; word-break: break-word; font-size: .9rem; color: var(--rk-muted); }
+.note-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ---------- MCQ: option explanations ---------- */
+.opt-exp-toggle.has { color: #4ade80; }
+.opt-exp-row { margin: -2px 0 10px 44px; }
+.review-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.review-opt { flex-wrap: wrap; }
+.review-opt-exp { margin-top: 6px; padding: 8px 12px; border-radius: 8px; background: rgba(59, 130, 246, .12); border-left: 3px solid #3b82f6; font-size: .9rem; }
+.mcq-opt-exp { margin-top: 3px; font-weight: 400; opacity: .9; }

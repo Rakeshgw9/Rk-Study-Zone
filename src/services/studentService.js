@@ -4,13 +4,13 @@ import { isAdminRole } from './authService'
 
 /*
   enrollments/{uid}_{portalId}  { uid, portalId, ownerId, name, email, createdAt, lastLoginAt }
-  studentData/{uid}_{portalId}  { uid, portalId, completed:{blockId:true}, notes:{chapterId:text},
+  studentData/{uid}_{portalId}  { uid, portalId, completed:{blockId:true}, notes:{chapterId:text}, blockNotes:{key:{chapterId,blockId,label,text,updatedAt}},
                                   bookmarks:[chapterId], attempts:{blockId:n}, scores:{blockId:{...}}, lastChapterId }
 */
 const sKey = (uid, pid) => `rk_demo_student_${uid}_${pid}`
 const eKey = 'rk_demo_enrollments'
 const readLS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } }
-const emptyData = (uid, portalId) => ({ uid, portalId, completed: {}, notes: {}, bookmarks: [], attempts: {}, scores: {}, lastChapterId: null })
+const emptyData = (uid, portalId) => ({ uid, portalId, completed: {}, notes: {}, blockNotes: {}, bookmarks: [], attempts: {}, scores: {}, lastChapterId: null })
 
 export async function enroll(user, portal) {
   const id = `${user.uid}_${portal.id}`

@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import {  LuCheck, LuDatabase, LuMoon, LuSettings, LuShieldCheck, LuSun, LuTrash2, LuUpload, LuUser, LuUsers } from 'react-icons/lu'
+import { LuBookOpen, LuCloudUpload, LuDatabase, LuLayers, LuLock, LuMoon, LuRotateCcw, LuSave, LuSettings, LuSettings2, LuShieldCheck, LuSun, LuTrash2, LuUpload, LuUser, LuUsers } from 'react-icons/lu'
 import { useOutletContext } from 'react-router-dom'
 import { useToast } from '../components/Toast'
 import { useConfirm } from '../components/ui/Confirm'
+import { usePrefs } from '../context/PrefsContext'
 import { useTheme } from '../context/ThemeContext'
-import { firebaseProjectId, isFirebaseConfigured, storage } from '../firebase/config'
-import { isAdminRole, roleLabel, updateUserProfile } from '../services/authService'
+import { firebaseProjectId, isFirebaseConfigured } from '../firebase/config'
+import { isAdminRole, isStaffRole, resetPassword, roleLabel, updateUserProfile } from '../services/authService'
+import { checkMediaStorage } from '../services/mediaService'
 import { listUsers, setUserRole } from '../services/userService'
+
+const DETAIL_KEYS = ['phone', 'altEmail', 'institution', 'address', 'city', 'state', 'pincode', 'bio']
+const pickDetails = (u) => Object.fromEntries(DETAIL_KEYS.map((k) => [k, u?.[k] || '']))
 
 const ROLES = [
   { v: 'student', l: 'Student' },
@@ -26,10 +31,34 @@ export default function SettingsPage() {
   const [savingProf, setSavingProf] = useState(false)
   const photoInputRef = useRef(null)
   const admin = isAdminRole(user.role)
+  const staff = isStaffRole(user.role)
+  const { prefs, setPref, resetPrefs } = usePrefs()
+  const [details, setDetails] = useState(() => pickDetails(user))
+  const [media, setMedia] = useState(null) // null | 'checking' | result
 
   useEffect(() => {
     setName(user?.name || '')
   }, [user?.name])
+
+  useEffect(() => {
+    setDetails(pickDetails(user))
+  }, [user?.phone, user?.altEmail, user?.institution, user?.address, user?.city, user?.state, user?.pincode, user?.bio]) // eslint-disable-line react-hooks/exhaustive-deps
+
+
+const runMediaCheck = async () => {
+  setMedia('checking')
+
+  try {
+    const result = await checkMediaStorage()
+    setMedia(result)
+  } catch (error) {
+    console.error('Media storage check failed:', error)
+    setMedia({ configured: false })
+  }
+}
+
+
+  useEffect(() => { if (isFirebaseConfigured) runMediaCheck() }, [])
 
   useEffect(() => {
     if (admin)
@@ -48,8 +77,8 @@ export default function SettingsPage() {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       return toast('Only JPG, PNG or WEBP images are allowed.', 'error')
     }
-    if (file.size > 2 * 1024 * 1024) {
-      return toast('Profile photo must be 2 MB or smaller.', 'error')
+    if (file.size > 5 * 1024 * 1024) {
+      return toast('Profile photo must be 5 MB or smaller.', 'error')
     }
     setSavingProf(true)
     try {
@@ -76,19 +105,33 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSaveName = async (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault()
     if (!name.trim()) return toast('Please enter your name', 'error')
+    if (details.altEmail && !/^\S+@\S+\.\S+$/.test(details.altEmail)) return toast('Please enter a valid alternative email.', 'error')
+    if (details.phone && !/^[+\d][\d\s-]{6,18}$/.test(details.phone)) return toast('Please enter a valid phone number.', 'error')
     setSavingProf(true)
     try {
-      await updateUserProfile({ name: name.trim() })
-      toast('Name updated successfully!')
+      await updateUserProfile({ name: name.trim(), details })
+      toast('Profile updated successfully!')
     } catch (err) {
-      toast(err.message || 'Could not update name', 'error')
+      toast(err.message || 'Could not update profile', 'error')
     } finally {
       setSavingProf(false)
     }
   }
+
+  const sendReset = async () => {
+    try {
+      await resetPassword(user.email)
+      toast(isFirebaseConfigured ? `Password reset link sent to ${user.email}` : 'Password reset is not available in demo mode.', isFirebaseConfigured ? undefined : 'error')
+    } catch (err) {
+      toast(err.message || 'Could not send the reset email', 'error')
+    }
+  }
+
+  const setD = (k) => (e) => setDetails((d) => ({ ...d, [k]: e.target.value }))
+  const dirty = name.trim() !== (user.name || '') || DETAIL_KEYS.some((k) => (details[k] || '') !== (user[k] || ''))
 
   const change = async (u, role) => {
     if (
@@ -164,26 +207,52 @@ export default function SettingsPage() {
                     </button>
                   )}
                 </div>
-                <small className="text-muted-soft d-block mt-1">JPG, PNG or WEBP under 2 MB</small>
+                <small className="text-muted-soft d-block mt-1">JPG, PNG or WEBP under 5 MB</small>
               </div>
             </div>
 
-            <form onSubmit={handleSaveName} className="mb-3">
-              <label className="ui-label" htmlFor="st-name">Full Name</label>
-              <div className="d-flex gap-2">
-                <input
-                  id="st-name"
-                  className="ui-input flex-grow-1"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your full name"
-                />
-                <button
-                  type="submit"
-                  className="btn ui-btn ui-btn-primary btn-sm px-3"
-                  disabled={savingProf || name.trim() === (user.name || '')}
-                >
-                  Save
+            <form onSubmit={handleSaveProfile} className="mb-3 st-form">
+              <div className="row g-2">
+                <div className="col-12">
+                  <label className="ui-label" htmlFor="st-name">Full Name</label>
+                  <input id="st-name" className="ui-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" maxLength={80} />
+                </div>
+                <div className="col-md-6">
+                  <label className="ui-label" htmlFor="st-phone">Phone</label>
+                  <input id="st-phone" className="ui-input" type="tel" inputMode="tel" value={details.phone} onChange={setD('phone')} placeholder="+91 98765 43210" maxLength={20} />
+                </div>
+                <div className="col-md-6">
+                  <label className="ui-label" htmlFor="st-alt">Alternative Email</label>
+                  <input id="st-alt" className="ui-input" type="email" value={details.altEmail} onChange={setD('altEmail')} placeholder="other@example.com" maxLength={120} />
+                </div>
+                <div className="col-12">
+                  <label className="ui-label" htmlFor="st-inst">School / Institution</label>
+                  <input id="st-inst" className="ui-input" value={details.institution} onChange={setD('institution')} placeholder="Where do you teach / study?" maxLength={120} />
+                </div>
+                <div className="col-12">
+                  <label className="ui-label" htmlFor="st-addr">Address</label>
+                  <textarea id="st-addr" className="ui-input ui-textarea" rows={2} value={details.address} onChange={setD('address')} placeholder="House / street / village" maxLength={240} />
+                </div>
+                <div className="col-md-5">
+                  <label className="ui-label" htmlFor="st-city">City / District</label>
+                  <input id="st-city" className="ui-input" value={details.city} onChange={setD('city')} maxLength={60} />
+                </div>
+                <div className="col-md-4">
+                  <label className="ui-label" htmlFor="st-state">State</label>
+                  <input id="st-state" className="ui-input" value={details.state} onChange={setD('state')} maxLength={60} />
+                </div>
+                <div className="col-md-3">
+                  <label className="ui-label" htmlFor="st-pin">PIN Code</label>
+                  <input id="st-pin" className="ui-input" inputMode="numeric" value={details.pincode} onChange={setD('pincode')} maxLength={12} />
+                </div>
+                <div className="col-12">
+                  <label className="ui-label" htmlFor="st-bio">About me</label>
+                  <textarea id="st-bio" className="ui-input ui-textarea" rows={2} value={details.bio} onChange={setD('bio')} placeholder="A short introduction (optional)" maxLength={400} />
+                </div>
+              </div>
+              <div className="d-flex justify-content-end mt-3">
+                <button type="submit" className="btn ui-btn ui-btn-primary btn-sm px-3" disabled={savingProf || !dirty}>
+                  <LuSave /> Save Profile
                 </button>
               </div>
             </form>
@@ -200,11 +269,73 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+
+          <div className="glass-panel p-4 mt-3">
+            <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuLock /> Security</h2>
+            <p className="small text-muted-soft">Forgot or want to change your password? We will email a secure reset link to <b>{user.email}</b>.</p>
+            <button type="button" className="btn ui-btn ui-btn-secondary btn-sm" onClick={sendReset}>Send password reset email</button>
+          </div>
         </div>
 
         <div className="col-lg-6">
-          <div className="glass-panel p-4 h-100">
-            <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuDatabase /> Data & Firebase</h2>
+          <div className="glass-panel p-4">
+            <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuSettings2 /> Appearance &amp; Accessibility</h2>
+            <div className="st-row">
+              <div><b>Text size</b><small>Makes every page easier to read.</small></div>
+              <div className="st-seg" role="group" aria-label="Text size">
+                {[['normal', 'A'], ['large', 'A+'], ['xlarge', 'A++']].map(([v, l]) => (
+                  <button key={v} type="button" className={prefs.fontScale === v ? 'on' : ''} onClick={() => setPref('fontScale', v)} aria-pressed={prefs.fontScale === v}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <Switch label="Reduce animations" hint="Turns off popups / hover motion. Helps older devices run smoothly." checked={prefs.reduceMotion} onChange={(v) => setPref('reduceMotion', v)} />
+          </div>
+
+          <div className="glass-panel p-4 mt-3">
+            <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuBookOpen /> Learning</h2>
+            <Switch label="Auto-complete blocks while reading" hint="A lesson block is marked done after you scroll to its end." checked={prefs.autoComplete} onChange={(v) => setPref('autoComplete', v)} />
+            <Switch label="Highlight & pen toolbar" hint="Show the floating teaching toolbar on lesson pages." checked={prefs.teachingToolbar} onChange={(v) => setPref('teachingToolbar', v)} />
+            <Switch label="Focus mode" hint="Open lessons with both side panels hidden for more reading space." checked={prefs.focusMode} onChange={(v) => setPref('focusMode', v)} />
+          </div>
+
+          {staff && (
+            <div className="glass-panel p-4 mt-3">
+              <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuLayers /> Builder</h2>
+              <div className="st-row">
+                <div><b>Autosave delay</b><small>Longer delays save fewer times (faster on slow internet).</small></div>
+                <select className="ui-input ui-select" style={{ width: 130 }} value={prefs.autosaveMs} onChange={(e) => setPref('autosaveMs', Number(e.target.value))} aria-label="Autosave delay">
+                  <option value={1200}>1.2 seconds</option>
+                  <option value={3000}>3 seconds</option>
+                  <option value={6000}>6 seconds</option>
+                  <option value={12000}>12 seconds</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          <div className="glass-panel p-4 mt-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h2 className="h6 fw-semibold mb-0 d-flex align-items-center gap-2"><LuCloudUpload /> Media Storage</h2>
+              <button type="button" className="btn ui-btn ui-btn-ghost btn-sm" onClick={runMediaCheck} disabled={media === 'checking'}><LuRotateCcw /> Check</button>
+            </div>
+            <dl className="kv">
+              <dt>Images &amp; files</dt>
+              <dd>
+                {!isFirebaseConfigured ? <span className="pill pill-warn">Local demo (kept in this browser)</span>
+                  : media === 'checking' || media === null ? <span className="pill">Checking…</span>
+        : media.configured ? <span className="pill pill-ok">Cloudinary (live)</span>
+        : <span className="pill pill-warn">Cloudinary not configured</span>}
+              </dd>
+            </dl>
+       <p className="small text-muted-soft mb-0">
+  Uploaded profile photos, lesson images and syllabus files are stored in Cloudinary through a secure Netlify function.
+  {isFirebaseConfigured && media && media !== 'checking' && !media.configured &&
+    ' Please check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Netlify → Environment variables.'}
+</p>
+          </div>
+
+          <div className="glass-panel p-4 mt-3">
+            <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuDatabase /> Data &amp; Firebase</h2>
             <dl className="kv">
               <dt>Mode</dt>
               <dd>
@@ -216,16 +347,13 @@ export default function SettingsPage() {
               </dd>
               <dt>Project</dt><dd>{firebaseProjectId || '—'}</dd>
               <dt>Authentication</dt><dd>Email/Password + Google Sign-In</dd>
-              <dt>Storage</dt>
-              <dd>
-                {isFirebaseConfigured && storage
-                  ? 'Firebase Storage (user photos + lesson media)'
-                  : 'Inline compressed media (local fallback)'}
-              </dd>
+              <dt>Database</dt><dd>Cloud Firestore (lessons, notes, progress)</dd>
+              <dt>Media</dt><dd>Cloudinary (via secure Netlify function)</dd>
             </dl>
-            <p className="small text-muted-soft mb-0">
+            <p className="small text-muted-soft">
               Draft content is saved in <code>portalContent</code>; students read <code>portalPublished</code> after you press Publish.
             </p>
+            <button type="button" className="btn ui-btn ui-btn-ghost btn-sm" onClick={() => { resetPrefs(); toast('Preferences reset to defaults') }}>Reset my preferences</button>
           </div>
         </div>
 
@@ -281,5 +409,14 @@ export default function SettingsPage() {
         )}
       </div>
     </>
+  )
+}
+
+function Switch({ label, hint, checked, onChange }) {
+  return (
+    <label className="st-row st-switch">
+      <div><b>{label}</b><small>{hint}</small></div>
+      <input type="checkbox" className="rk-toggle" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
+    </label>
   )
 }

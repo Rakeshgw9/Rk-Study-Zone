@@ -162,7 +162,7 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                   <div className="opts">
                     {x.order.map((oi, k) => {
                       const picked = x.type === 'multiple' ? (a || []).includes(oi) : a === oi
-                      return <span key={oi} className={`o ${r.showCorrectAnswers && isRight(x, oi) ? 'right' : ''} ${picked && !isRight(x, oi) ? 'wrong' : ''} ${picked ? 'picked' : ''}`}>{L[k]}. <RichHtml as="span" value={x.options[oi]} /></span>
+                      return <span key={oi} className={`o ${r.showCorrectAnswers && isRight(x, oi) ? 'right' : ''} ${picked && !isRight(x, oi) ? 'wrong' : ''} ${picked ? 'picked' : ''}`}>{L[k]}. <RichHtml as="span" value={x.options[oi]} />{s.showSolution && String(x.optionExplanations?.[oi] || '').trim() !== '' && <small className="d-block mcq-opt-exp"><b>Why {L[k]}?</b> <RichHtml as="span" value={x.optionExplanations[oi]} /></small>}</span>
                     })}
                   </div>
                   {s.showSolution && x.explanation && <div className="exp"><b>Solution:</b> <RichHtml as="span" value={x.explanation} /></div>}

@@ -1,54 +1,74 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { isFirebaseConfigured, storage } from '../firebase/config'
-import { resizeImage } from '../lib/id'
 
-/** Uploads an image to Firebase Storage when configured, with seamless fallback
- * to local compressed data URLs in demo or unconfigured mode. */
-export async function uploadImage(file, path = 'uploads', { max = 1200, quality = 0.82 } = {}) {
+import {
+  IMAGE_TYPES,
+  uploadBlob,
+  uploadImageFile,
+} from './mediaService'
+
+/*
+  RK Study Zone Media Service
+
+  Images       -> Cloudinary
+  Profile Photo -> Cloudinary
+  PDF / JSON   -> Cloudinary
+  Videos       -> Cloudinary
+
+  Firebase Storage is not required.
+*/
+
+/** Upload an image and return its Cloudinary URL. */
+export async function uploadImage(
+  file,
+  path = 'uploads',
+  { max = 1200, quality = 0.82 } = {}
+) {
   if (!file) return null
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    throw new Error('Only JPG, PNG or WEBP images are allowed.')
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    throw new Error('Image must be 5 MB or smaller.')
-  }
 
-  if (isFirebaseConfigured && storage) {
-    try {
-      const ext = (file.name || 'image.jpg').split('.').pop() || 'jpg'
-      const cleanPath = path.replace(/^\/+|\/+$/g, '')
-      const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
-      const fileRef = ref(storage, `${cleanPath}/${fileName}`)
-      await uploadBytes(fileRef, file, { contentType: file.type })
-      return await getDownloadURL(fileRef)
-    } catch (e) {
-      console.warn('Firebase Storage upload failed, falling back to local image data:', e)
-    }
-  }
-
-  return resizeImage(file, Math.min(max, 1200), quality)
+  return uploadImageFile(file, {
+    folder: path,
+    kind: 'media',
+    max,
+    quality,
+  })
 }
 
-/** Uploads a user profile photo specifically to their users/{uid}/ directory */
+/** Upload a user's profile photo. */
 export async function uploadProfilePhoto(uid, file) {
   if (!file) return null
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    throw new Error('Only JPG, PNG or WEBP images are allowed.')
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    throw new Error('Profile photo must be 2 MB or smaller.')
+
+  if (!IMAGE_TYPES.includes(file.type)) {
+    throw new Error(
+      'Only JPG, PNG or WEBP images are allowed.'
+    )
   }
 
-  if (isFirebaseConfigured && storage) {
-    try {
-      const ext = (file.name || 'avatar.jpg').split('.').pop() || 'jpg'
-      const fileRef = ref(storage, `users/${uid}/profile_${Date.now()}.${ext}`)
-      await uploadBytes(fileRef, file, { contentType: file.type })
-      return await getDownloadURL(fileRef)
-    } catch (e) {
-      console.warn('Firebase Storage profile upload failed, falling back to compressed local data:', e)
-    }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error(
+      'Profile photo must be 5 MB or smaller.'
+    )
   }
 
-  return resizeImage(file, 300, 0.85)
+  return uploadImageFile(file, {
+    kind: 'profile',
+    folder: `users/${uid}`,
+    max: 360,
+    quality: 0.86,
+    maxSizeMB: 5,
+  })
+}
+
+/** Upload a PDF, JSON or other supported document.
+ * Returns Cloudinary metadata including URL and publicId.
+ */
+export async function uploadDocument(
+  file,
+  folder = 'syllabus'
+) {
+  if (!file) return null
+
+  return uploadBlob(file, {
+    kind: 'media',
+    folder,
+    name: file.name,
+  })
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuChevronDown, LuFileText, LuGraduationCap, LuImage, LuLayers, LuLock, LuPlus, LuSave, LuTrash2, LuUpload, LuX } from 'react-icons/lu'
 import Modal from './Modal'
-import { ACCESS_TYPES, CATEGORIES, SYLLABUS_MAX, createPortal, deletePortal, deleteSyllabus, isSlugTaken, saveSyllabus, syllabusType, updatePortal } from '../services/portalService'
+import { ACCESS_TYPES, CATEGORIES, applySyllabusChanges, createPortal, deletePortal, isSlugTaken, syllabusFilesOf, updatePortal } from '../services/portalService'
+import SyllabusManagerModal from './SyllabusManagerModal'
 import { useToast } from './Toast'
 
 const MAX_DESC = 200
@@ -18,10 +19,11 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [syllabus, setSyllabus] = useState(null) // newly chosen File
-  const [syllabusRemoved, setSyllabusRemoved] = useState(false)
+  // staged syllabus rows: { key, id? (saved file), file? (new File), name, type, size, status }
+  const [sylRows, setSylRows] = useState([])
+  const [sylOpen, setSylOpen] = useState(false)
+  const [sylError, setSylError] = useState('')
   const fileRef = useRef(null)
-  const syllabusRef = useRef(null)
   const toast = useToast()
 
   useEffect(() => {
@@ -30,7 +32,8 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
 
   useEffect(() => {
     if (!show) return
-    setErrors({}); setCover(null); setConfirmDelete(false); setSyllabus(null); setSyllabusRemoved(false)
+    setErrors({}); setCover(null); setConfirmDelete(false); setSylOpen(false); setSylError('')
+    setSylRows(portal ? syllabusFilesOf(portal).map((f) => ({ key: f.id, id: f.id, name: f.name, type: f.type, size: f.size, status: 'saved' })) : [])
     if (portal) {
       setForm({ name: portal.name, slug: portal.slug, description: portal.description || '', category: portal.category, accessType: portal.accessType, active: portal.status === 'active' })
       setPreview(portal.coverUrl || null); setSlugTouched(true)
@@ -49,17 +52,11 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
     setCover(file); setPreview(URL.createObjectURL(file))
   }
 
-  function onSyllabus(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    if (!syllabusType(file)) return setErrors((x) => ({ ...x, syllabus: 'Syllabus must be a PDF, JPG, PNG or JSON file.' }))
-    if (file.size > SYLLABUS_MAX) return setErrors((x) => ({ ...x, syllabus: 'Syllabus must be 5 MB or smaller.' }))
-    setErrors((x) => ({ ...x, syllabus: undefined }))
-    setSyllabus(file); setSyllabusRemoved(false)
-  }
-  const sizeLabel = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`)
-  const syllabusName = syllabus ? syllabus.name : !syllabusRemoved && portal?.hasSyllabus ? portal.syllabusName || 'Syllabus' : ''
+  const rowKey = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  const addSyllabus = (files) => setSylRows((rows) => [...rows, ...files.map((file) => ({ key: rowKey(), file, name: file.name, type: file.type || '', size: file.size, status: 'new' }))])
+  const replaceSyllabus = (key, file) => setSylRows((rows) => rows.map((r) => (r.key === key ? { key: rowKey(), file, name: file.name, type: file.type || '', size: file.size, status: 'new', replaces: r.id || r.replaces } : r)))
+  const removeSyllabus = (key) => setSylRows((rows) => rows.filter((r) => r.key !== key))
+  const savedIds = syllabusFilesOf(portal).map((f) => f.id)
 
   function validate() {
     const e = {}
@@ -83,10 +80,16 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
       else id = await createPortal(form, cover, user)
       let syllabusError = ''
       try {
-        if (syllabus) await saveSyllabus(id, syllabus)
-        else if (isEdit && syllabusRemoved && portal.hasSyllabus) await deleteSyllabus(id)
+        const keepIds = sylRows.filter((r) => r.id).map((r) => r.id)
+        const removeIds = isEdit ? savedIds.filter((x) => !keepIds.includes(x)) : []
+        const add = sylRows.filter((r) => r.file).map((r) => r.file)
+        if (add.length || removeIds.length) {
+          const base = isEdit ? syllabusFilesOf(portal) : []
+          const res = await applySyllabusChanges(id, base, { add, removeIds })
+          if (res.errors.length) syllabusError = res.errors.join(' ')
+        }
       } catch (err) { console.error(err); syllabusError = err.message || 'The syllabus could not be saved.' }
-      if (syllabusError) toast(`${isEdit ? 'Portal updated' : 'Portal created'}, but the syllabus was not saved: ${syllabusError}`, 'error')
+      if (syllabusError) toast(`${isEdit ? 'Portal updated' : 'Portal created'}, but some syllabus files were not saved: ${syllabusError}`, 'error')
       else toast(isEdit ? 'Portal updated successfully.' : 'Portal created successfully.')
       onClose()
     } catch (err) {
@@ -101,7 +104,8 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
   }
 
   return (
-    <Modal show={show} onClose={busy ? undefined : onClose} className="rk-form-modal" labelledBy="pf-title">
+    <>
+    <Modal show={show} onClose={busy || sylOpen ? undefined : onClose} className="rk-form-modal" labelledBy="pf-title">
       <form onSubmit={submit} noValidate className="d-flex flex-column h-100">
         <div className="pf-head">
           <LuLayers className="pf-head-icon" />
@@ -137,17 +141,22 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
             </div>
             <div className="col-md-6">
               <span className="rk-label d-block">Syllabus <span className="opt">(Optional)</span></span>
-              <div className={`syllabus-box ${errors.syllabus ? 'is-invalid' : ''}`}>
+              <div className={`syllabus-box ${sylRows.length ? 'has-files' : ''}`}>
                 <span className="syllabus-ico"><LuFileText /></span>
                 <div className="syllabus-info">
-                  <b title={syllabusName || undefined}>{syllabusName || 'Syllabus (Optional)'}</b>
-                  <small>{syllabus ? `${sizeLabel(syllabus.size)} · ready to upload` : syllabusName ? 'Saved with this portal' : 'Upload your syllabus (PDF, JPG/PNG or JSON).'}</small>
+                  <b title={sylRows.map((r) => r.name).join(', ') || undefined}>
+                    {sylRows.length === 0 ? 'Syllabus (Optional)' : sylRows.length === 1 ? sylRows[0].name : `${sylRows.length} syllabus files`}
+                  </b>
+                  <small>
+                    {sylRows.length === 0
+                      ? 'Upload syllabus files (PDF, JPG/PNG or JSON).'
+                      : sylRows.some((r) => r.status === 'new') ? 'Changes are saved when you press Save' : 'Saved with this portal'}
+                  </small>
                 </div>
-                {syllabusName && <button type="button" className="syllabus-remove" onClick={() => { setSyllabus(null); setSyllabusRemoved(true) }} aria-label="Remove syllabus" title="Remove syllabus" disabled={busy}><LuX /></button>}
-                <button type="button" className="btn rk-btn-primary btn-sm syllabus-add" onClick={() => syllabusRef.current?.click()} disabled={busy}>{syllabusName ? <LuUpload className="me-1" /> : <LuPlus className="me-1" />}{syllabusName ? 'Replace' : 'Add Syllabus'}</button>
-                <input ref={syllabusRef} type="file" hidden accept=".pdf,.jpg,.jpeg,.png,.json,application/pdf,image/jpeg,image/png,application/json" onChange={onSyllabus} />
+                <button type="button" className="btn rk-btn-primary btn-sm syllabus-add" onClick={() => { setSylError(''); setSylOpen(true) }} disabled={busy}>
+                  {sylRows.length ? <LuUpload className="me-1" /> : <LuPlus className="me-1" />}{sylRows.length ? 'Manage' : 'Add Syllabus'}
+                </button>
               </div>
-              {errors.syllabus && <div className="field-error">{errors.syllabus}</div>}
             </div>
 
             <div className="col-md-6">
@@ -209,5 +218,16 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
         </div>
       </form>
     </Modal>
+    <SyllabusManagerModal
+      show={show && sylOpen}
+      onClose={() => setSylOpen(false)}
+      rows={sylRows}
+      onAdd={addSyllabus}
+      onReplace={replaceSyllabus}
+      onRemove={removeSyllabus}
+      error={sylError}
+      setError={setSylError}
+    />
+    </>
   )
 }

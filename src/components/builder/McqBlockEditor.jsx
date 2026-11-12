@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   LuArrowDown,
   LuArrowUp,
@@ -61,6 +61,8 @@ const MCQ_KEYS = [
   'answers',
   'type',
   'explanation',
+  'optionExplanations',
+  'explanations',
   'hint',
   'image',
   'difficulty',
@@ -123,6 +125,8 @@ export function McqCenter({ block, setData, ui, setUi }) {
     setData({ questions: next })
     setPreviewKey((k) => k + 1)
   }
+
+  const [expOpen, setExpOpen] = useState({}) // which option explanations are expanded (key: questionId:optionIndex)
 
   const updQ = (i, patch) => {
     const next = qs.map((x, j) => (j === i ? { ...x, ...patch } : x))
@@ -546,9 +550,12 @@ export function McqCenter({ block, setData, ui, setUi }) {
                       {q.options.map((o, oi) => {
                         const isRight =
                           q.type === 'multiple' ? q.answers.includes(oi) : q.answer === oi
+                        const oexp = q.optionExplanations?.[oi] || ''
+                        const expKey = `${q.id}:${oi}`
+                        const expShown = expOpen[expKey] ?? !!String(oexp).trim()
                         return (
+                          <Fragment key={oi}>
                           <div
-                            key={oi}
                             className={`opt-row ${isRight ? 'right is-correct' : ''}`}
                           >
                             <button
@@ -586,6 +593,16 @@ export function McqCenter({ block, setData, ui, setUi }) {
 
                             <button
                               type="button"
+                              className={`icon-mini opt-exp-toggle ${String(oexp).trim() ? 'has' : ''}`}
+                              onClick={() => setExpOpen((m) => ({ ...m, [expKey]: !expShown }))}
+                              title={expShown ? 'Hide explanation for this option' : 'Add explanation for this option'}
+                              aria-expanded={expShown}
+                            >
+                              <LuBookmark />
+                            </button>
+
+                            <button
+                              type="button"
                               className="icon-mini danger"
                               disabled={q.options.length <= 2}
                               onClick={() => {
@@ -593,6 +610,7 @@ export function McqCenter({ block, setData, ui, setUi }) {
                                 const answers = q.answers.map(shift).filter((v) => v !== null)
                                 updQ(sel, {
                                   options: q.options.filter((_, j) => j !== oi),
+                                  optionExplanations: (q.optionExplanations || []).filter((_, j) => j !== oi),
                                   answer:
                                     q.type === 'multiple'
                                       ? answers[0] ?? -1
@@ -605,6 +623,18 @@ export function McqCenter({ block, setData, ui, setUi }) {
                               <LuTrash2 />
                             </button>
                           </div>
+                          {expShown && (
+                            <div className="opt-exp-row">
+                              <RichField
+                                label={`Explanation for option ${L[oi]} (shown after the exam)`}
+                                value={oexp}
+                                onChange={(v) => updQ(sel, { optionExplanations: Array.from({ length: q.options.length }, (_, j) => (j === oi ? v : q.optionExplanations?.[j] || '')) })}
+                                placeholder={isRight ? 'Why this option is correct…' : 'Why this option is wrong…'}
+                                rows={2}
+                              />
+                            </div>
+                          )}
+                          </Fragment>
                         )
                       })}
                     </div>
@@ -613,7 +643,7 @@ export function McqCenter({ block, setData, ui, setUi }) {
                       <button
                         type="button"
                         className="btn ui-btn ui-btn-ghost btn-sm mt-2"
-                        onClick={() => updQ(sel, { options: [...q.options, ''] })}
+                        onClick={() => updQ(sel, { options: [...q.options, ''], optionExplanations: [...(q.optionExplanations || q.options.map(() => '')), ''] })}
                       >
                         <LuPlus /> Add Option
                       </button>

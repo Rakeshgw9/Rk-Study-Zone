@@ -21,6 +21,7 @@ import {
 import {
   DEFAULT_MCQ_SETTINGS,
   buildPaper,
+  hasOptionExplanations,
   isAnswered,
   isCorrect,
   questionMarks,
@@ -63,6 +64,8 @@ export default function McqExamModal({
   const [phase, setPhase] = useState('run') // run | result
   const [result, setResult] = useState(null)
   const [confirmExit, setConfirmExit] = useState(false)
+  const [showAllExp, setShowAllExp] = useState(false) // result: open option-wise explanations of every question
+  const [openExp, setOpenExp] = useState({}) // result: per-question toggle
   const [confirmSubmit, setConfirmSubmit] = useState(false)
   const submitted = useRef(false)
 
@@ -158,6 +161,8 @@ export default function McqExamModal({
     setSecs(0)
     setIdx(0)
     setResult(null)
+    setShowAllExp(false)
+    setOpenExp({})
     submitted.current = false
     setPhase('run')
   }
@@ -498,12 +503,21 @@ export default function McqExamModal({
 
             {/* Answer Review Section */}
             <div className="mcq-result-review-section">
-              <h4 className="review-title">Question Breakdown & Solutions</h4>
+              <div className="review-head">
+                <h4 className="review-title mb-0">Question Breakdown & Solutions</h4>
+                {paper.some(hasOptionExplanations) && (
+                  <button type="button" className="btn ui-btn ui-btn-secondary btn-sm" onClick={() => { setShowAllExp((v) => !v); setOpenExp({}) }} aria-pressed={showAllExp}>
+                    {showAllExp ? 'Hide all explanations' : 'Show all explanations'}
+                  </button>
+                )}
+              </div>
               <div className="review-list">
                 {paper.map((q, i) => {
                   const ans = answers[q.id]
                   const answered = isAnswered(ans)
                   const right = answered && isCorrect(q, ans)
+                  const canExp = hasOptionExplanations(q)
+                  const expOn = canExp && (openExp[q.id] ?? showAllExp)
                   return (
                     <div
                       key={q.id}
@@ -531,6 +545,11 @@ export default function McqExamModal({
                               <span><RichHtml as="span" value={q.options[oi]} /></span>
                               {isSol && <span className="ms-auto text-success fw-bold">✓ Correct</span>}
                               {picked && !isSol && <span className="ms-auto text-danger fw-bold">✗ Selected</span>}
+                              {expOn && String(q.optionExplanations?.[oi] || '').trim() !== '' && (
+                                <div className="review-opt-exp w-100">
+                                  <b>Why {L[k]}?</b> <RichHtml as="span" value={q.optionExplanations[oi]} />
+                                </div>
+                              )}
                             </div>
                           )
                         })}
@@ -539,6 +558,11 @@ export default function McqExamModal({
                         <div className="review-explanation">
                           <b>Solution:</b> <RichHtml as="span" value={q.explanation} />
                         </div>
+                      )}
+                      {canExp && (
+                        <button type="button" className="btn ui-btn ui-btn-ghost btn-sm mt-2" onClick={() => setOpenExp((m) => ({ ...m, [q.id]: !expOn }))} aria-expanded={expOn}>
+                          {expOn ? 'Hide option explanations' : 'Explain every option'}
+                        </button>
                       )}
                     </div>
                   )

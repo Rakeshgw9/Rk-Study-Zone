@@ -13,10 +13,12 @@ import {
     LuFlag,
   LuListTree,
   LuNotebookPen,
+  LuPencil,
   LuPanelLeft,
   LuPanelRight,
   LuSquarePen,
   LuTarget,
+  LuTrash2,
   LuX,
 } from 'react-icons/lu'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -34,14 +36,16 @@ import HeadingBgLayers from '../components/ui/HeadingBg'
 import SandboxFrame from '../components/ui/SandboxFrame'
 import TableView from '../components/ui/TableView'
 import { useAuth } from '../context/AuthContext'
+import { usePrefs } from '../context/PrefsContext'
 import { frameProps } from '../lib/blockRender'
 import { flatChapters } from '../lib/content'
 import { chapterProgress, visibleContent } from '../lib/progress'
 import { isAdminRole, isStaffRole } from '../services/authService'
 import { loadDraft, loadPublished } from '../services/contentService'
+import { syllabusFilesOf } from '../services/portalService'
 import { getPortal } from '../services/portalService'
 import { enroll, loadStudentData, saveStudentData } from '../services/studentService'
-import { downloadChapterPdf } from '../lib/pdfExport'
+import { downloadChapterPdf, requestFrameSnapshots } from '../lib/pdfExport'
 
 /** Marks a block complete once the reader reaches its end */
 function SeenSentinel({ onSeen }) {
@@ -66,13 +70,40 @@ function SeenSentinel({ onSeen }) {
   return <div className="seen-sentinel" aria-hidden="true" />
 }
 
-function BlockView({ block, sd, onDone, onOpenExam }) {
+const plain = (html = '') => String(html).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+/** A short readable name for a block (used in My Notes) */
+export function blockLabelText(b) {
+  const d = b.data || {}
+  const t = plain(d.heading) || plain(d.title) || plain(d.sections?.[0]?.heading) || ''
+  if (t) return t.slice(0, 90)
+  return (b.title && b.title !== 'Custom HTML / CSS / JS' ? b.title : 'Lesson block').slice(0, 90)
+}
+export const noteKeyOf = (blockId, sec) => (sec ? `${blockId}#${sec}` : blockId)
+
+const noop = () => {}
+
+function NoteButton({ has, onClick }) {
+  return (
+    <button type="button" className={`blk-note-btn ${has ? 'has' : ''}`} onClick={onClick} title={has ? 'Edit your note' : 'Add a note'}>
+      <LuPencil /> <span>{has ? 'Note saved' : 'Add note'}</span>
+    </button>
+  )
+}
+
+function BlockView({ block, sd, onDone, onOpenExam, onNote }) {
   const seen = useCallback(() => onDone(block.id), [onDone, block.id])
+  const [secs, setSecs] = useState(null) // number of sections found inside a custom HTML / JSON frame
+  const notes = sd?.blockNotes || {}
+  const hasBlockNote = !!notes[block.id]
+  const sectionKeys = Object.keys(notes).filter((k) => k.startsWith(`${block.id}#`)).map((k) => k.slice(block.id.length + 1))
+  const openBlockNote = () => onNote?.({ blockId: block.id, key: block.id, title: blockLabelText(block) })
+  const blockBtn = onNote ? <NoteButton has={hasBlockNote} onClick={openBlockNote} /> : null
 
   if (block.type === 'table') {
     return (
       <section className="lesson-block table" id={`b-${block.id}`}>
         <TableView data={block.data} />
+        {blockBtn}
         <SeenSentinel onSeen={seen} />
       </section>
     )
@@ -116,6 +147,7 @@ function BlockView({ block, sd, onDone, onOpenExam }) {
     return (
       <section className={`lesson-block ${block.type}`} id={`b-${block.id}`}>
         <ReadyBlockView block={block} />
+        {blockBtn}
         <SeenSentinel onSeen={seen} />
       </section>
     )
@@ -125,6 +157,7 @@ function BlockView({ block, sd, onDone, onOpenExam }) {
     return (
       <section className={`lesson-block ${block.type}`} id={`b-${block.id}`}>
         {block.type === 'youtube' ? <YoutubeView block={block} /> : <SliderView block={block} />}
+        {blockBtn}
         <SeenSentinel onSeen={seen} />
       </section>
     )
@@ -137,7 +170,15 @@ function BlockView({ block, sd, onDone, onOpenExam }) {
       id={`b-${block.id}`}
       style={{ marginTop: block.data.margin || undefined }}
     >
-      <SandboxFrame {...fp} title={block.title} />
+      <SandboxFrame
+        {...fp}
+        title={block.title}
+        notes={!!onNote}
+        noteKeys={sectionKeys}
+        onSections={setSecs}
+        onNote={(n) => onNote?.({ blockId: block.id, key: noteKeyOf(block.id, n.key), title: n.title || blockLabelText(block) })}
+      />
+      {secs !== null && secs < 2 && blockBtn}
       <SeenSentinel onSeen={seen} />
     </section>
   )
@@ -149,6 +190,7 @@ export default function LessonPage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const { prefs } = usePrefs()
   const wantDraft = params.get('draft') === '1'
   const requestedUnitId = params.get('unit')
   const [state, setState] = useState('loading')
@@ -157,8 +199,10 @@ export default function LessonPage() {
   const [sd, setSd] = useState(null)
   const [search, setSearch] = useState('')
   const [treeOpen, setTreeOpen] = useState(false)
-  const [leftSidebarHidden, setLeftSidebarHidden] = useState(false)
-  const [rightSidebarHidden, setRightSidebarHidden] = useState(false)
+  const [leftSidebarHidden, setLeftSidebarHidden] = useState(() => !!prefs.focusMode)
+  const [rightSidebarHidden, setRightSidebarHidden] = useState(() => !!prefs.focusMode)
+  const [noteEdit, setNoteEdit] = useState(null) // { key, blockId, title, text }
+  const [noteSearch, setNoteSearch] = useState('')
   const [panel, setPanel] = useState(null) // notes | bookmarks | syllabus
   const [noteText, setNoteText] = useState('')
   const [loginOpen, setLoginOpen] = useState(false)
@@ -304,17 +348,46 @@ export default function LessonPage() {
     if (!cur) return
     setPdfBusy(true)
     try {
+      // copy what each custom lesson block currently shows (scripts included), then open the print dialog
+      const snaps = await requestFrameSnapshots(document)
       await downloadChapterPdf({
         chapter: cur.chapter,
         unit: cur.unit,
         portal,
+        snaps,
       })
-      toast('Chapter PDF generated successfully!')
+      toast('Print dialog opened — choose “Save as PDF”. Tip: untick “Headers and footers”.')
     } catch (err) {
       toast('Could not generate PDF: ' + (err.message || 'Error'), 'error')
     } finally {
       setPdfBusy(false)
     }
+  }
+
+  const openNote = ({ blockId, key, title }) => {
+    const ex = sd?.blockNotes?.[key]
+    setNoteEdit({ key, blockId, title, text: ex?.text || '' })
+  }
+  const saveBlockNote = () => {
+    if (!noteEdit || !cur) return
+    const text = noteEdit.text.trim()
+    update((p) => {
+      const bn = { ...(p.blockNotes || {}) }
+      if (!text) delete bn[noteEdit.key]
+      else bn[noteEdit.key] = { chapterId: noteEdit.chapterId || cur.chapter.id, blockId: noteEdit.blockId, label: noteEdit.title, text, updatedAt: Date.now() }
+      return { ...p, blockNotes: bn }
+    })
+    toast(text ? 'Note saved' : 'Note removed')
+    setNoteEdit(null)
+  }
+  const deleteBlockNote = (key) => update((p) => { const bn = { ...(p.blockNotes || {}) }; delete bn[key]; return { ...p, blockNotes: bn } })
+  const jumpToNote = (n) => {
+    setPanel(null)
+    const run = () => {
+      const el = document.getElementById(`b-${n.blockId}`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    if (n.chapterId !== cur?.chapter.id) { go(n.chapterId); setTimeout(run, 600) } else run()
   }
 
   const openExam = (block) => {
@@ -454,7 +527,7 @@ export default function LessonPage() {
       )}
 
       {/* Change 2: Floating Teaching & Annotation Toolbar */}
-      <TeachingToolbar />
+      {prefs.teachingToolbar && <TeachingToolbar />}
 
       <div
         className={`st-grid ${leftSidebarHidden ? 'left-hidden' : ''} ${
@@ -638,8 +711,9 @@ export default function LessonPage() {
                   key={b.id}
                   block={b}
                   sd={sd}
-                  onDone={markDone}
+                  onDone={prefs.autoComplete ? markDone : noop}
                   onOpenExam={openExam}
+                  onNote={isDraft ? undefined : openNote}
                 />
               ))
             )}
@@ -785,51 +859,139 @@ export default function LessonPage() {
         />
       )}
 
-      {/* My Notes Modal */}
+      {/* My Notes — chapter-wise list of every note (chapter note + block / section notes) */}
       <Modal
         show={panel === 'notes'}
         onClose={() => setPanel(null)}
-        className="ui-modal ui-modal-md"
+        className="ui-modal ui-modal-lg notes-modal"
         labelledBy="notes-t"
       >
         <div className="ui-modal-head">
-          <span className="ui-modal-icon">
-            <LuNotebookPen />
-          </span>
+          <span className="ui-modal-icon"><LuNotebookPen /></span>
           <div className="flex-grow-1">
             <h2 id="notes-t">My Notes</h2>
-            <p>{chapter.title}</p>
+            <p>All your notes, chapter by chapter.</p>
           </div>
-          <button className="ui-x" onClick={() => setPanel(null)} aria-label="Close">
-            <LuX />
-          </button>
+          <button className="ui-x" onClick={() => setPanel(null)} aria-label="Close"><LuX /></button>
         </div>
         <div className="ui-modal-body">
-          <textarea
-            className="ui-input ui-textarea"
-            rows={8}
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Write your notes for this chapter…"
-            maxLength={5000}
-          />
-          <div className="ui-hint text-end">{noteText.length} / 5000</div>
+          <div className="notes-current">
+            <label className="ui-label" htmlFor="chapter-note">Note for this chapter — {chapter.title}</label>
+            <textarea
+              id="chapter-note"
+              className="ui-input ui-textarea"
+              rows={3}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Write a note for this whole chapter…"
+              maxLength={5000}
+            />
+            <div className="d-flex justify-content-between align-items-center mt-1">
+              <span className="ui-hint">{noteText.length} / 5000</span>
+              <button
+                type="button"
+                className="btn ui-btn ui-btn-primary btn-sm"
+                onClick={() => {
+                  update((p) => ({ ...p, notes: { ...p.notes, [chapter.id]: noteText } }))
+                  toast('Chapter note saved')
+                }}
+              >
+                Save chapter note
+              </button>
+            </div>
+          </div>
+
+          {(() => {
+            const q = noteSearch.trim().toLowerCase()
+            const blockNotes = Object.entries(sd.blockNotes || {}).map(([key, n]) => ({ key, ...n }))
+            const groups = flat
+              .map((x) => {
+                const chapterNote = sd.notes?.[x.chapter.id]
+                const items = blockNotes.filter((n) => n.chapterId === x.chapter.id)
+                  .filter((n) => !q || `${n.label} ${n.text}`.toLowerCase().includes(q))
+                const showChapterNote = !!chapterNote && (!q || chapterNote.toLowerCase().includes(q))
+                return { x, chapterNote: showChapterNote ? chapterNote : '', items }
+              })
+              .filter((g) => g.chapterNote || g.items.length)
+            const total = blockNotes.length + Object.values(sd.notes || {}).filter(Boolean).length
+            return (
+              <>
+                <div className="notes-list-head">
+                  <b>Saved notes <span className="pill pill-info">{total}</span></b>
+                  <input className="ui-input" style={{ maxWidth: 220 }} placeholder="Search notes…" value={noteSearch} onChange={(e) => setNoteSearch(e.target.value)} aria-label="Search notes" />
+                </div>
+                {groups.length === 0 ? (
+                  <p className="text-soft mb-0">{total ? 'No notes match your search.' : 'No notes yet. Use the “Add note” button on any block or section while you read.'}</p>
+                ) : (
+                  <div className="notes-groups">
+                    {groups.map(({ x, chapterNote, items }) => (
+                      <section key={x.chapter.id} className="notes-group">
+                        <h3><small>Unit {x.unitIndex + 1}</small> {x.chapter.title}</h3>
+                        {chapterNote && (
+                          <div className="note-item chapter">
+                            <div className="note-body"><b>Chapter note</b><p>{chapterNote}</p></div>
+                            <div className="note-actions">
+                              <button type="button" className="icon-mini" title="Open chapter" onClick={() => { setPanel(null); go(x.chapter.id) }}><LuArrowRight /></button>
+                              <button type="button" className="icon-mini danger" title="Delete note" onClick={() => { update((p) => ({ ...p, notes: { ...p.notes, [x.chapter.id]: '' } })); if (x.chapter.id === chapter.id) setNoteText('') }}><LuTrash2 /></button>
+                            </div>
+                          </div>
+                        )}
+                        {items.map((n) => (
+                          <div key={n.key} className="note-item">
+                            <div className="note-body"><b>{n.label || 'Lesson block'}</b><p>{n.text}</p></div>
+                            <div className="note-actions">
+                              <button type="button" className="icon-mini" title="Go to this part" onClick={() => jumpToNote(n)}><LuArrowRight /></button>
+                              <button type="button" className="icon-mini" title="Edit note" onClick={() => { setPanel(null); if (n.chapterId !== chapter.id) go(n.chapterId); setNoteEdit({ key: n.key, blockId: n.blockId, title: n.label, text: n.text, chapterId: n.chapterId }) }}><LuPencil /></button>
+                              <button type="button" className="icon-mini danger" title="Delete note" onClick={() => deleteBlockNote(n.key)}><LuTrash2 /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </section>
+                    ))}
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
         <div className="ui-modal-foot">
-          <button className="btn ui-btn ui-btn-secondary" onClick={() => setPanel(null)}>
-            Cancel
-          </button>
-          <button
-            className="btn ui-btn ui-btn-primary"
-            onClick={() => {
-              update((p) => ({ ...p, notes: { ...p.notes, [chapter.id]: noteText } }))
-              setPanel(null)
-              toast('Note saved')
-            }}
-          >
-            Save Note
-          </button>
+          <button className="btn ui-btn ui-btn-secondary" onClick={() => setPanel(null)}>Close</button>
         </div>
+      </Modal>
+
+      {/* Add / edit a note on one block or section */}
+      <Modal show={!!noteEdit} onClose={() => setNoteEdit(null)} className="ui-modal ui-modal-md" labelledBy="bnote-t">
+        {noteEdit && (
+          <>
+            <div className="ui-modal-head">
+              <span className="ui-modal-icon"><LuPencil /></span>
+              <div className="flex-grow-1 min-w-0">
+                <h2 id="bnote-t">{sd.blockNotes?.[noteEdit.key] ? 'Edit note' : 'Add note'}</h2>
+                <p className="text-truncate">{chapter.title}{noteEdit.title ? ` › ${noteEdit.title}` : ''}</p>
+              </div>
+              <button className="ui-x" onClick={() => setNoteEdit(null)} aria-label="Close"><LuX /></button>
+            </div>
+            <div className="ui-modal-body">
+              <textarea
+                className="ui-input ui-textarea"
+                rows={6}
+                autoFocus
+                value={noteEdit.text}
+                onChange={(e) => setNoteEdit((n) => ({ ...n, text: e.target.value }))}
+                placeholder="Write your note for this part of the lesson…"
+                maxLength={3000}
+              />
+              <div className="ui-hint text-end">{noteEdit.text.length} / 3000</div>
+            </div>
+            <div className="ui-modal-foot">
+              {sd.blockNotes?.[noteEdit.key] && (
+                <button className="btn ui-btn ui-btn-danger me-auto" onClick={() => { deleteBlockNote(noteEdit.key); setNoteEdit(null); toast('Note removed') }}><LuTrash2 /> Delete</button>
+              )}
+              <button className="btn ui-btn ui-btn-secondary" onClick={() => setNoteEdit(null)}>Cancel</button>
+              <button className="btn ui-btn ui-btn-primary" onClick={saveBlockNote}>Save Note</button>
+            </div>
+          </>
+        )}
       </Modal>
 
       {/* Bookmarks Modal */}

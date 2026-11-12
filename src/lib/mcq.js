@@ -15,10 +15,16 @@ export const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
 export const QUESTION_TYPES = [{ value: 'single', label: 'Single Choice (MCQ)' }, { value: 'multiple', label: 'Multiple Choice (select all)' }]
 export const DEFAULT_MCQ_RESULT = { passPercent: 40, showScore: true, showCorrectAnswers: true, passMessage: 'Great job! You passed.', failMessage: 'Keep practising — you can do it!' }
 
-export const blankQuestion = (over = {}) => ({ id: uid('q'), type: 'single', question: '', options: ['', '', '', ''], answer: -1, answers: [], explanation: '', hint: '', image: '', difficulty: 'Medium', marks: 0, negative: '', subject: '', ...over })
+export const blankQuestion = (over = {}) => ({ id: uid('q'), type: 'single', question: '', options: ['', '', '', ''], answer: -1, answers: [], explanation: '', optionExplanations: ['', '', '', ''], hint: '', image: '', difficulty: 'Medium', marks: 0, negative: '', subject: '', ...over })
 const q = (question, options, answer, explanation = '') => blankQuestion({ question, options, answer, explanation })
 /** Fill missing fields on old questions so every editor/player can rely on them */
-export const normalizeQuestion = (x = {}) => ({ ...blankQuestion(), ...x, options: Array.isArray(x.options) ? x.options : ['', '', '', ''], answers: Array.isArray(x.answers) ? x.answers : [], type: x.type === 'multiple' ? 'multiple' : 'single' })
+/** One explanation per option (same order as options); always the same length as options */
+export const fitOptionExplanations = (list, count) => Array.from({ length: count }, (_, i) => (Array.isArray(list) && list[i] != null ? String(list[i]) : ''))
+export const normalizeQuestion = (x = {}) => {
+  const options = Array.isArray(x.options) ? x.options : ['', '', '', '']
+  return { ...blankQuestion(), ...x, options, optionExplanations: fitOptionExplanations(x.optionExplanations, options.length), answers: Array.isArray(x.answers) ? x.answers : [], type: x.type === 'multiple' ? 'multiple' : 'single' }
+}
+export const hasOptionExplanations = (x) => Array.isArray(x?.optionExplanations) && x.optionExplanations.some((e) => String(e || '').trim() !== '')
 export const isExamBlock = (b) => b?.type === 'mcq' && !!b.data?.exam?.enabled
 export const isAnswered = (a) => (Array.isArray(a) ? a.length > 0 : a !== undefined && a !== null && a !== -1)
 export const questionMarks = (x, s) => (Number(x.marks) > 0 ? Number(x.marks) : Number(s.marksPerQuestion) || 1)
@@ -41,7 +47,8 @@ export const MCQ_JSON_HELP = `{
       "options": ["A", "B", "C", "D"],
       "type": "single",       // or "multiple" (then use "answers": [0, 2])
       "answer": 2,            // index (0 = first) or "C" / option text
-      "explanation": "optional",
+      "explanation": "optional — overall solution",
+      "optionExplanations": ["why A is right/wrong", "why B …", "why C …", "why D …"],   // optional, one per option
       "hint": "optional",
       "image": "https://… (optional)",
       "difficulty": "Easy | Medium | Hard",
@@ -86,12 +93,19 @@ export function parseMcqJson(text) {
   const list = Array.isArray(raw) ? raw : raw.questions
   if (!Array.isArray(list)) return { ok: false, errors: ['Expected a "questions" array (or a top-level array).'] }
   const questions = list.map((x) => {
-    const options = Array.isArray(x.options) ? x.options.map(String) : ['A', 'B', 'C', 'D'].map((k) => x[k] ?? x[k.toLowerCase()]).filter((v) => v !== undefined).map(String)
+    const optObjs = Array.isArray(x.options) ? x.options : null // options may also be written as { "text": "…", "explanation": "…" }
+    const optText = (o) => (o && typeof o === 'object' ? o.text ?? o.option ?? o.label ?? '' : o)
+    const options = optObjs ? optObjs.map((o) => String(optText(o))) : ['A', 'B', 'C', 'D'].map((k) => x[k] ?? x[k.toLowerCase()]).filter((v) => v !== undefined).map(String)
+    const rawExp = x.optionExplanations ?? x.explanations ?? x.optionExplanation ?? x.optionSolutions
+    let optionExplanations = options.map(() => '')
+    if (Array.isArray(rawExp)) optionExplanations = options.map((_, i) => String(rawExp[i] && typeof rawExp[i] === 'object' ? rawExp[i].explanation ?? rawExp[i].text ?? '' : rawExp[i] ?? ''))
+    else if (rawExp && typeof rawExp === 'object') optionExplanations = options.map((_, i) => String(rawExp['ABCDEFGH'[i]] ?? rawExp['abcdefgh'[i]] ?? rawExp[i] ?? rawExp[String(i + 1)] ?? ''))
+    if (optObjs) optObjs.forEach((o, i) => { if (o && typeof o === 'object' && (o.explanation ?? o.why) && !optionExplanations[i]) optionExplanations[i] = String(o.explanation ?? o.why) })
     const rawAns = x.answers ?? (Array.isArray(x.answer) ? x.answer : undefined)
     const multiple = x.type === 'multiple' || Array.isArray(rawAns)
     const answers = multiple ? (Array.isArray(rawAns) ? rawAns : [x.answer ?? x.correct]).map((a) => answerIndex(a, options)).filter((n) => n >= 0) : []
     const marks = Number(x.marks); const neg = x.negative
-    return blankQuestion({ question: String(x.question ?? x.q ?? ''), options, type: multiple ? 'multiple' : 'single', answer: multiple ? (answers[0] ?? -1) : answerIndex(x.answer ?? x.correct ?? x.ans, options), answers, explanation: String(x.explanation ?? x.solution ?? ''), hint: String(x.hint ?? ''), image: String(x.image ?? ''), difficulty: DIFFICULTIES.includes(x.difficulty) ? x.difficulty : 'Medium', marks: marks > 0 ? marks : 0, negative: neg === undefined || neg === null || neg === '' || Number.isNaN(Number(neg)) ? '' : Number(neg), subject: String(x.subject ?? x.topic ?? '') })
+    return blankQuestion({ question: String(x.question ?? x.q ?? ''), options, type: multiple ? 'multiple' : 'single', answer: multiple ? (answers[0] ?? -1) : answerIndex(x.answer ?? x.correct ?? x.ans, options), answers, explanation: String(x.explanation ?? x.solution ?? ''), optionExplanations, hint: String(x.hint ?? ''), image: String(x.image ?? ''), difficulty: DIFFICULTIES.includes(x.difficulty) ? x.difficulty : 'Medium', marks: marks > 0 ? marks : 0, negative: neg === undefined || neg === null || neg === '' || Number.isNaN(Number(neg)) ? '' : Number(neg), subject: String(x.subject ?? x.topic ?? '') })
   })
   const errors = validateQuestions(questions)
   return { ok: errors.length === 0, errors, data: { title: Array.isArray(raw) ? undefined : raw.title, description: Array.isArray(raw) ? undefined : raw.description, questions } }
@@ -104,6 +118,7 @@ export function exportMcqJson(block) {
       const x = normalizeQuestion(raw); const o = { question: x.question, options: x.options }
       if (x.type === 'multiple') { o.type = 'multiple'; o.answers = x.answers } else o.answer = x.answer
       o.explanation = x.explanation
+      if (hasOptionExplanations(x)) o.optionExplanations = x.optionExplanations
       if (x.hint) o.hint = x.hint
       if (x.image) o.image = x.image
       o.difficulty = x.difficulty
@@ -116,6 +131,7 @@ export function exportMcqJson(block) {
 }
 
 export const MCQ_TEMPLATES = [
+  { id: 'explained', label: 'With option-wise explanations', desc: 'Every option gets its own explanation shown after the exam.', json: { title: 'Chapter Practice Test', description: 'Read the explanation of every option after you submit.', questions: [{ question: 'Which of the following is the correct meaning of Physical Education?', options: ['Only physical exercises', 'Development of the body only', 'A systematic process for all-round development', 'Training for sports competition only'], answer: 2, explanation: 'Physical Education aims at the all-round development of a person.', optionExplanations: ['Wrong — PE is more than exercise; it also builds mind, social and emotional skills.', 'Wrong — it is not limited to the body.', 'Correct — it is a planned process that develops the whole personality.', 'Wrong — competition is only one part of PE.'], difficulty: 'Easy', subject: 'Concept of PE' }] } },
   { id: 'single', label: 'Single choice (A–D)', desc: 'Classic four-option questions with explanation.', json: { title: 'Chapter Practice Test', description: 'Choose the best answer.', questions: [{ question: 'Which of the following is the primary aim of Physical Education?', options: ['To develop mental and social harmony', 'To provide academic knowledge', 'To improve reading and writing skills', 'To reduce classroom workload'], answer: 0, explanation: 'Physical Education aims at all-round development.', difficulty: 'Easy', subject: 'Concept of PE' }] } },
   { id: 'multiple', label: 'Multiple correct answers', desc: 'Select-all-that-apply questions.', json: { title: 'Select all that apply', description: 'More than one option can be correct.', questions: [{ type: 'multiple', question: 'Which of these are components of physical fitness?', options: ['Strength', 'Speed', 'Flexibility', 'Intelligence quotient'], answers: [0, 1, 2], explanation: 'IQ is a mental measure.', difficulty: 'Medium' }] } },
   { id: 'truefalse', label: 'True / False', desc: 'Two-option statements.', json: { title: 'True or False', description: 'Decide whether each statement is true.', questions: [{ question: 'Physical Education develops only the body.', options: ['True', 'False'], answer: 1, explanation: 'It develops body, mind and social skills.', difficulty: 'Easy' }] } },
