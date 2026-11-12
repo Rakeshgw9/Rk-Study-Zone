@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -5,26 +6,90 @@
     <link rel="icon" type="image/png" href="./favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#030b1a" />
-    <meta name="description" content="RK Study Zone — Learn, Practice, Succeed. Study platform for exam preparation." />
+    <meta
+      name="description"
+      content="RK Study Zone — Learn, Practice, Succeed. Study platform for exam preparation."
+    />
+
     <title>RK Study Zone</title>
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Oriya:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Oriya:wght@400;600;700&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+
+    <!-- Main application document styles only -->
+    <style>
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+    </style>
+
+    <!-- Local storage fallback -->
     <script>
-      // fallback when browser storage is blocked (private mode / sandboxed preview)
       (function () {
-        try { var k = '__rk'; window.localStorage.setItem(k, k); window.localStorage.removeItem(k) } catch (e) {
-          var m = {}; var mem = { getItem: function (k) { return k in m ? m[k] : null }, setItem: function (k, v) { m[k] = String(v) },
-            removeItem: function (k) { delete m[k] }, clear: function () { m = {} }, key: function (i) { return Object.keys(m)[i] || null },
-            get length() { return Object.keys(m).length } };
-          try { Object.defineProperty(window, 'localStorage', { value: mem, configurable: true }) } catch (e2) {}
-          try { Object.defineProperty(window, 'sessionStorage', { value: mem, configurable: true }) } catch (e3) {}
+        try {
+          var k = '__rk';
+          window.localStorage.setItem(k, k);
+          window.localStorage.removeItem(k);
+        } catch (e) {
+          var m = {};
+
+          var mem = {
+            getItem: function (k) {
+              return k in m ? m[k] : null;
+            },
+            setItem: function (k, v) {
+              m[k] = String(v);
+            },
+            removeItem: function (k) {
+              delete m[k];
+            },
+            clear: function () {
+              m = {};
+            },
+            key: function (i) {
+              return Object.keys(m)[i] || null;
+            },
+            get length() {
+              return Object.keys(m).length;
+            }
+          };
+
+          try {
+            Object.defineProperty(window, 'localStorage', {
+              value: mem,
+              configurable: true
+            });
+          } catch (e2) {}
+
+          try {
+            Object.defineProperty(window, 'sessionStorage', {
+              value: mem,
+              configurable: true
+            });
+          } catch (e3) {}
         }
-      })()
+      })();
     </script>
   </head>
+
   <body>
     <div id="root"></div>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

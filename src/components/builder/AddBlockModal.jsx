@@ -3,20 +3,21 @@ import { LuCirclePlus, LuLayers, LuX } from 'react-icons/lu'
 import Modal from '../Modal'
 
 const TYPES = [
-  { type: 'html', badge: '</>', title: 'HTML / CSS / JS Block', desc: 'Create custom interactive content using HTML, CSS and JavaScript.', tone: 'blue' },
-  { type: 'json', badge: '{ }', title: 'JSON Content Block', desc: 'Add structured content from JSON data (lessons, points, etc.).', tone: 'purple' },
-  { type: 'mcq', badge: 'mcq', title: 'MCQ Block', desc: 'Create practice tests or exams with multiple choice questions.', tone: 'teal' },
-  { type: 'heading-paragraph', badge: 'H + P', title: 'Heading & Paragraph', desc: 'Add a heading followed by formatted lesson text.', tone: 'blue' },
-  { type: 'heading-image', badge: 'H + IMG', title: 'Heading & Image', desc: 'Combine a section heading with an illustrative image.', tone: 'purple' },
-  { type: 'heading-list', badge: 'H + LIST', title: 'Heading & List', desc: 'Present key points in an ordered or unordered list.', tone: 'teal' },
-  { type: 'heading-example', badge: 'EX', title: 'Heading & Example', desc: 'Explain a concept with a highlighted example.', tone: 'blue' },
-  { type: 'youtube', badge: 'YT', title: 'YouTube Video Block', desc: 'Embed a YouTube video with heading, caption and settings.', tone: 'pink', isNew: true },
-  { type: 'slider', badge: 'SLD', title: 'Image Slider / Carousel', desc: 'Create an image slider with caption, buttons and autoplay.', tone: 'purple', isNew: true },
-]
-
+  { type: 'html', badge: '</>', title: 'HTML / CSS / JS', desc: 'Custom interactive content.', tone: 'blue' },
+  { type: 'json', badge: '{ }', title: 'JSON Content', desc: 'Structured lesson data.', tone: 'purple' },
+  { type: 'mcq', badge: 'MCQ', title: 'MCQ Quiz', desc: 'Practice tests and exams.', tone: 'teal' },
+  { type: 'table', badge: 'TB', title: 'Table', desc: 'Editable advanced tables.', tone: 'teal', isNew: true },
+  { type: 'heading-paragraph', badge: 'H+P', title: 'Heading & Text', desc: 'Formatted lesson text.', tone: 'blue' },
+  { type: 'heading-image', badge: 'IMG', title: 'Heading & Image', desc: 'Images with headings.', tone: 'purple' },
+  { type: 'heading-list', badge: 'LIST', title: 'Heading & List', desc: 'Bullet and numbered lists.', tone: 'teal' },
+  { type: 'heading-example', badge: 'EX', title: 'Example', desc: 'Highlighted examples.', tone: 'blue' },
+  { type: 'youtube', badge: 'YT', title: 'YouTube', desc: 'Embedded video content.', tone: 'pink', isNew: true },
+  { type: 'slider', badge: 'SLD', title: 'Image Slider', desc: 'Image carousel with autoplay.', tone: 'purple', isNew: true },
+];
 function Art({ type }) {
   if (type === 'youtube') return <div className="ab-art ready-art"><span className="ra-video"><i /></span><b className="ra-heading" /></div>
   if (type === 'slider') return <div className="ab-art ready-art"><span className="ra-slider"><i className="l" /><i className="r" /></span><span className="ra-dots"><i className="on" /><i /><i /><i /></span></div>
+  if (type === 'table') return <div className="ab-art ready-art"><span className="ra-table"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span></div>
   if (type === 'mcq') return <div className="ab-art mcq"><div><i /><b /></div><div className="on"><i /><b /></div><div><i /><b /></div></div>
   if (type === 'heading-paragraph') return <div className="ab-art ready-art"><b className="ra-heading"/><i/><i/><i className="short"/></div>
   if (type === 'heading-image') return <div className="ab-art ready-art"><b className="ra-heading"/><span className="ra-image"><i/></span><i className="short"/></div>
@@ -39,9 +40,19 @@ export default function AddBlockModal({ show, onClose, onAdd, chapterTitle }) {
         <div className="ab-grid" role="radiogroup" aria-label="Block type">
           {TYPES.map((t) => (
             <button key={t.type} type="button" role="radio" aria-checked={sel === t.type} className={`ab-card ab-tone-${t.tone} ${sel === t.type ? 'on' : ''}`} onClick={() => setSel(t.type)} onDoubleClick={() => onAdd(t.type)}>
+             
+             
+             <div className='pop_flex'>
+              <div className='left_icon'>
               <span className="ab-badge">{t.badge}</span>
+              </div>
+              <div className='right_text'>
               <strong>{t.title}{t.isNew && <em className="ab-new">NEW</em>}</strong>
               <span className="ab-desc">{t.desc}</span>
+              </div>
+              </div>
+
+
               <Art type={t.type} />
             </button>
           ))}

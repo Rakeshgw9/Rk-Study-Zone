@@ -1,17 +1,22 @@
 rules_version = '2';
-// RK Study Zone — Storage rules (portal covers + lesson media)
+// RK Study Zone — Storage rules (portal covers, lesson media, and user profile photos)
 service firebase.storage {
   match /b/{bucket}/o {
     function okImage() {
       return request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/(png|jpeg|webp)');
     }
-    // portal-covers/{uid}/{portalId}/{file}
+    // users/{uid}/{fileName} — user profile photo
+    match /users/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid && okImage();
+    }
+    // portal-covers/{uid}/{portalId}/{fileName}
     match /portal-covers/{uid}/{portalId}/{fileName} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == uid && okImage();
     }
-    // media/{portalId}/{file} — images used inside JSON / HTML lessons
+    // media/{portalId}/{fileName} — images used inside JSON / HTML lessons
     match /media/{portalId}/{fileName} {
       allow read: if true;
       allow write: if request.auth != null && okImage()

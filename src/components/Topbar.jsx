@@ -45,7 +45,9 @@ export default function Topbar({ user, search, onSearch, onMenu, onLogout }) {
         </button>
         <div className="position-relative" ref={ref}>
           <button className="user-chip" onClick={() => setMenuOpen((o) => !o)} aria-expanded={menuOpen}>
-            <span className="avatar"><LuUser /></span>
+            <span className="avatar">
+              {user?.photoURL ? <img src={user.photoURL} alt={displayName} className="avatar-img" /> : <LuUser />}
+            </span>
             <span className="d-none d-sm-inline user-name">{displayName}</span>
             <LuChevronDown className="d-none d-sm-inline" />
           </button>

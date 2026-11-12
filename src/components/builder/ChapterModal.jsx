@@ -11,7 +11,7 @@ const slugify = (value = '') => value.toLowerCase().trim().normalize('NFKD').rep
 const blank = {
   title: '', description: '', titleSize: 28, color: '#0a84ff',
   headingSize: 28, headingTextColor: '#ffffff', headingAccentColor: '#0d6efd', headingBackgroundMode: 'gradient', headingStartColor: '#087f5b', headingEndColor: '#0d6efd', headingSolidColor: '#173b83',
-  fullBackgroundMode: 'gradient', fullStartColor: '#0d47a1', fullEndColor: '#1976d2', fullSolidColor: '#0d47a1', slug: '',
+  fullBackgroundMode: 'gradient', fullStartColor: '#030a14', fullEndColor: '#1976d2', fullSolidColor: '#030a14', slug: '',
   ...HEADING_IMAGE_DEFAULTS,
 }
 // New chapters start with the education background image; existing chapters keep whatever mode they already use.

@@ -109,3 +109,7 @@ npm run dev
 ```
 
 For a production build, run `npm run build`. Portal, chapter and unit background images are currently processed locally in the browser and stored with the content draft; Firebase configuration remains available for future storage integration.
+
+
+## CMS upgrade (rich text, code editor, JSON, MCQ, tables, chapter exams)
+See **UPGRADE_NOTES.md** for setup (`npm install`), file map, behaviour and limitations.

@@ -4,6 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import './styles/theme.css'
 import './styles/cms.css'
+import './styles/editors.css'
 import App from './App.jsx'
 
 

@@ -6,7 +6,7 @@ import { ColorSwatchField, GradientPresets, ResetButton, SampleLessonCard, Setti
 import { uploadImage } from '../../services/storageService'
 
 const slugify = (value = '') => value.toLowerCase().trim().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-const blank = { title: '', description: '', titleSize: 20, descSize: 14, headingSize: 28, headingTextColor: '#ffffff', headingAccentColor: '#00d6fd', headingBackgroundMode: 'gradient', headingBackgroundImage: '', headingStartColor: '#0756b9', headingEndColor: '#087fcb', headingSolidColor: '#0d47a1', icon: 'layers', color: '#0a84ff', fullBackgroundMode: 'color', fullBackgroundColor: '#0d47a1', fullStartColor: '#0d47a1', fullEndColor: '#1976d2', fullBackgroundImage: '', slug: '' }
+const blank = { title: '', description: '', titleSize: 20, descSize: 14, headingSize: 28, headingTextColor: '#ffffff', headingAccentColor: '#001c35', headingBackgroundMode: 'gradient', headingBackgroundImage: '', headingStartColor: '#070e16', headingEndColor: '#000f18', headingSolidColor: '#050c18', icon: 'layers', color: '#0a84ff', fullBackgroundMode: 'color', fullBackgroundColor: '#010111', fullStartColor: '#010307', fullEndColor: '#050c13', fullBackgroundImage: '', slug: '' }
 const HEADING_KEYS = ['headingSize', 'headingTextColor', 'headingAccentColor', 'headingBackgroundMode', 'headingBackgroundImage', 'headingStartColor', 'headingEndColor', 'headingSolidColor']
 const BACKGROUND_KEYS = ['fullBackgroundMode', 'fullBackgroundColor', 'fullStartColor', 'fullEndColor', 'fullBackgroundImage']
 const defaultsFor = (keys) => Object.fromEntries(keys.map((k) => [k, blank[k]]))

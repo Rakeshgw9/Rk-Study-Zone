@@ -1,7 +1,9 @@
 import { clone, uid } from './id'
 import { DARK_STYLE } from './blockTheme'
-import { DEFAULT_JSON_STYLE, SAMPLE_LESSON, countLessonMedia, validateLessonJson } from './jsonLesson'
-import { DEFAULT_MCQ_DISPLAY, DEFAULT_MCQ_RESULT, DEFAULT_MCQ_SETTINGS, SAMPLE_QUESTIONS } from './mcq'
+import { DEFAULT_JSON_DISPLAY, DEFAULT_JSON_STYLE, SAMPLE_LESSON, countLessonMedia, validateLessonJson } from './jsonLesson'
+import { validateQuestions } from './mcq'
+import { DEFAULT_MCQ_DISPLAY, DEFAULT_MCQ_EXAM, DEFAULT_MCQ_RESULT, DEFAULT_MCQ_SETTINGS, SAMPLE_QUESTIONS } from './mcq'
+import { DEFAULT_TABLE_OPTIONS, DEFAULT_TABLE_STYLE, SAMPLE_TABLE, validateTable } from './table'
 
 /* Portal → Unit → Chapter → Blocks (ordered) */
 
@@ -12,6 +14,7 @@ export const BLOCK_TYPES = {
   html: { label: 'HTML / CSS / JS', sub: 'Custom Code', short: '</>' },
   json: { label: 'JSON Content', sub: 'Upload or edit JSON lesson content', short: '{ }' },
   mcq: { label: 'Create MCQ', sub: 'Chapter Practice Test', short: 'mcq' },
+  table: { label: 'Table Block', sub: 'Advanced editable table', short: 'TB' },
   youtube: { label: 'YouTube Video', sub: 'Embedded video', short: 'YT' },
   slider: { label: 'Image Slider / Carousel', sub: 'Image slider', short: 'SLD' },
   'heading-paragraph': { label: 'Heading & Paragraph', sub: 'Structured lesson text', short: 'H+P' },
@@ -55,7 +58,7 @@ export function newBlock(type) {
   const nativeTypes = ['heading-paragraph','heading-image','heading-list','heading-example','multi-heading']
   const base = { id: uid('blk'), type: nativeTypes.includes(type) ? type : type, template: nativeTypes.includes(type) ? type : type, visible: true, title: BLOCK_TYPES[type].label, updatedAt: Date.now() }
   const nativeStyle = { ...DARK_STYLE, fontFamily: 'Inter', fontSize: 16, headingSize: 24, textAlign: 'left' }
-  const nativeSpacing = { padding: 24, marginTop: 0, marginBottom: 18, maxWidth: 1000 }
+  const nativeSpacing = { padding: 24, marginTop: 0, marginBottom: 18, }
   if (nativeTypes.includes(type)) {
     // Fields start EMPTY. Light-grey placeholder text is drawn by the UI and is never stored as content.
     const data = { heading: '', body: '', image: '', imageAlt: '', caption: '', listStyle: 'bullet', items: ['', '', ''], exampleTitle: 'Example', exampleText: '', sections: [{ heading: '', level: 'h1', body: '' }, { heading: '', level: 'h2', body: '' }], style: nativeStyle, spacing: nativeSpacing, fullWidth: false }
@@ -63,9 +66,43 @@ export function newBlock(type) {
   }
   if (type === 'youtube') return { ...base, title: 'YouTube Video', data: { ...YOUTUBE_DEFAULTS } }
   if (type === 'slider') return { ...base, title: 'Image Slider', data: { ...SLIDER_DEFAULTS, slides: [] } }
-  if (type === 'html') return { ...base, title: 'Custom HTML / CSS / JS', data: { html: SAMPLE_HTML, css: SAMPLE_CSS, js: SAMPLE_JS, padding: 16, margin: 0, fullWidth: false, copyButton: false, packages: [], style: { background: '#ffffff', textColor: '#0f172a', fontFamily: 'Inter', fontSize: 16, textAlign: 'left', borderColor: '#dbe4f3', borderWidth: 0, borderRadius: 12 } } }
-  if (type === 'json') return { ...base, title: 'Lesson Content (Structured)', data: { json: JSON.stringify(SAMPLE_LESSON, null, 2), style: { ...DEFAULT_JSON_STYLE }, packages: [], customCss: '', customJs: '' } }
-  return { ...base, title: 'Chapter Practice Test', data: { title: 'Chapter Practice Test', description: 'Attempt the following MCQs.', questions: SAMPLE_QUESTIONS(), settings: { ...DEFAULT_MCQ_SETTINGS }, display: { ...DEFAULT_MCQ_DISPLAY }, result: { ...DEFAULT_MCQ_RESULT } } }
+
+
+if (type === 'html') {
+  return {
+    ...base,
+    title: 'Custom HTML / CSS / JS',
+    data: {
+      html: SAMPLE_HTML,
+      css: SAMPLE_CSS,
+      js: SAMPLE_JS,
+      assets: [],
+      padding: 16,
+      margin: 0,
+      fullWidth: false,
+      copyButton: false,
+      packages: [],
+      style: {
+        background: '#ffffff',
+        textColor: '#0f172a',
+        fontFamily: 'Inter',
+        fontSize: 16,
+        textAlign: 'left',
+        borderColor: '#dbe4f3',
+        borderWidth: 0,
+        borderRadius: 12,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }
+    }
+  };
+}
+
+
+
+  if (type === 'json') return { ...base, title: 'Lesson Content (Structured)', data: { json: JSON.stringify(SAMPLE_LESSON, null, 2), style: { ...DEFAULT_JSON_STYLE }, display: { ...DEFAULT_JSON_DISPLAY }, renderer: 'lesson', packages: [], customCss: '', customJs: '' } }
+  if (type === 'table') { const t = SAMPLE_TABLE(); return { ...base, title: 'Table Block', data: { title: 'Types of Physical Activities', caption: 'Physical activities can be classified into different types based on their purpose and nature.', tableCaption: 'Classification of Physical Activities', rows: t.rows, cols: t.cols, options: { ...DEFAULT_TABLE_OPTIONS }, style: { ...DEFAULT_TABLE_STYLE }, customCss: '', spacing: { padding: 20, marginTop: 0, marginBottom: 18 } } } }
+  return { ...base, title: 'Chapter Practice Test', data: { title: 'Chapter Practice Test', description: 'Attempt the following MCQs.', questions: SAMPLE_QUESTIONS(), settings: { ...DEFAULT_MCQ_SETTINGS }, display: { ...DEFAULT_MCQ_DISPLAY }, result: { ...DEFAULT_MCQ_RESULT }, exam: { ...DEFAULT_MCQ_EXAM } } }
 }
 
 /** Convert legacy template-backed HTML blocks into structured ready-made blocks.
@@ -192,7 +229,8 @@ export function validateContent(content) {
     u.chapters.forEach((ch) => ch.blocks.forEach((b) => {
       const where = `${u.title} › ${ch.title} › ${BLOCK_TYPES[b.type]?.label || b.title}`
       if (b.type === 'json') { const v = validateLessonJson(b.data.json); if (!v.ok) errors.push(`${where}: ${v.errors[0].message}`) }
-      if (b.type === 'mcq') { if (!b.data.questions.length) errors.push(`${where}: no questions.`) }
+      if (b.type === 'mcq') { if (!b.data.questions.length) errors.push(`${where}: no questions.`); else { const qe = validateQuestions(b.data.questions); if (qe.length) errors.push(`${where}: ${qe[0]}`) } }
+      if (b.type === 'table') { const te = validateTable(b.data); if (te.length) errors.push(`${where}: ${te[0]}`) }
     }))
   })
   return errors

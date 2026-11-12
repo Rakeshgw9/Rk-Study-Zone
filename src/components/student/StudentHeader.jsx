@@ -38,7 +38,9 @@ export default function StudentHeader({ title = 'RK Study Zone', subtitle = 'Lea
           <button className="icon-btn position-relative d-none d-sm-inline-flex" aria-label="Notifications"><LuBell /><span className="bell-dot" /></button>
           <div className="position-relative" ref={ref}>
             <button className="user-chip" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-              <span className="avatar"><LuUser /></span>
+              <span className="avatar">
+                {user?.photoURL ? <img src={user.photoURL} alt={user.name || ''} className="avatar-img" /> : <LuUser />}
+              </span>
               <span className="d-none d-lg-inline user-name">{user?.name || 'Student'}</span>
               <LuChevronDown className="d-none d-lg-inline" />
             </button>

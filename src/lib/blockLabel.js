@@ -1,4 +1,5 @@
 import { BLOCK_TYPES } from './content'
+import { richToText } from './richText'
 
 /* Shared naming logic — used by the builder left tree AND the student sidebar,
    so both always show the same label for a block. */
@@ -23,15 +24,17 @@ export function blockHeadingText(block) {
   const d = block?.data || {}
   switch (block?.type) {
     case 'heading-paragraph': case 'heading-image': case 'heading-list': case 'heading-example':
-      return clean(d.heading)
+      return richToText(d.heading)
     case 'multi-heading':
-      return clean(d.sections?.find((s) => clean(s.heading))?.heading)
+      return richToText(d.sections?.find((s) => richToText(s.heading))?.heading)
     case 'mcq':
+      return clean(d.title)
+    case 'table':
       return clean(d.title)
     case 'youtube': case 'slider':
       return clean(d.heading)
     case 'json': {
-      try { const t = clean(JSON.parse(d.json || '{}')?.title); if (t) return t } catch { /* invalid JSON while typing */ }
+      try { const t = richToText(JSON.parse(d.json || '{}')?.title || ''); if (t) return t } catch { /* invalid JSON while typing */ }
       break
     }
     case 'html': {

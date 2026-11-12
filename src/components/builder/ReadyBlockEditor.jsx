@@ -1,8 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { LuImage, LuUpload, LuTrash2, LuPlus, LuX, LuSave, LuMoon, LuSun } from 'react-icons/lu'
 import { Field, NumberField, Section, Tabs, Toggle } from '../ui/Controls'
 import { ColorSwatchField } from '../ui/SettingsControls'
 import { uploadImage } from '../../services/storageService'
+import { isRichEmpty } from '../../lib/richText'
+import { RichEditable, RichField, RichHtml } from '../ui/RichText'
 import { DARK_STYLE, THEME_TEMPLATES, isLegacyLightStyle, themeTemplateStyle } from '../../lib/blockTheme'
 
 // Light-grey hints only. They are drawn by CSS and are NEVER stored as block content.
@@ -16,29 +18,22 @@ const defaults = {
   exampleTitle: 'Example', exampleText: '',
   sections: [{ heading: '', level: 'h2', body: '' }],
   style: { ...DARK_STYLE, fontFamily: 'Inter', fontSize: 16, headingSize: 24, textAlign: 'left', headingAlign: 'left', lineHeight: 1.65, fontWeight: 400, shadow: 'none', imageFit: 'contain' },
-  spacing: { padding: 24, marginTop: 0, marginBottom: 18, maxWidth: 1000, itemGap: 8 }
+  spacing: { padding: 24, marginTop: 0, marginBottom: 18, itemGap: 8 }
 }
 // Dark is the default look. Older blocks that still carry the untouched white defaults (and were never themed) are shown dark too.
 const mergedStyle = (raw={}) => ({ ...defaults.style, ...raw, ...(!raw.theme && isLegacyLightStyle(raw) ? DARK_STYLE : {}) })
 const merged = (d={}) => ({ ...defaults, ...d, style: mergedStyle(d.style||{}), spacing: { ...defaults.spacing, ...(d.spacing||{}) }, items: d.items || defaults.items, sections: d.sections || defaults.sections })
 const FieldInput = ({label,value,onChange,placeholder,...props}) => <Field label={label}><input className="ui-input" value={value ?? ''} onChange={e=>onChange(e.target.value)} placeholder={placeholder} {...props}/></Field>
-const TextArea = ({label,value,onChange,rows=4,placeholder}) => <Field label={label}><textarea className="ui-input ui-textarea" rows={rows} value={value ?? ''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></Field>
-/** Single-line-looking textarea that grows with its content */
-function AutoGrow({ label, value, onChange, placeholder }) {
-  const ref = useRef(null)
-  useLayoutEffect(() => { const el = ref.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }, [value])
-  return <Field label={label}><textarea ref={ref} rows={1} className="ui-input ui-autogrow" value={value ?? ''} placeholder={placeholder} onChange={e=>onChange(e.target.value.replace(/\n/g, ' '))} onKeyDown={e=>{ if (e.key === 'Enter') e.preventDefault() }}/></Field>
-}
+const TextArea = ({label,value,onChange,rows=4,placeholder}) => <RichField label={label} value={value} onChange={onChange} rows={rows} placeholder={placeholder}/>
+/** Single-line rich heading field (uses the universal formatting toolbar) */
+const AutoGrow = ({ label, value, onChange, placeholder }) => <RichField singleLine label={label} value={value} onChange={onChange} placeholder={placeholder}/>
 const Color = ({label,value,onChange}) => <ColorSwatchField label={label} value={value} onChange={onChange}/>
 
-/** Text typed in a contentEditable element. Trailing line-breaks added by the browser are removed. */
-const readText = (el) => (el.innerText || '').replace(/\u00a0/g, ' ').replace(/^\n+|\n+$/g, '')
-
-/** Editable text node. Empty fields show a CSS placeholder (never stored). In read-only student view empty fields are not rendered. */
+/** Editable rich text node. Empty fields show a CSS placeholder (never stored). In read-only student view empty fields are not rendered. */
 function Editable({ as: Tag = 'div', value, placeholder, editable, show, onCommit, className, style }) {
-  const text = value ?? ''
-  if (!String(text).trim() && !show) return null
-  return <Tag key={text} className={className} style={style} contentEditable={editable || undefined} suppressContentEditableWarning data-placeholder={placeholder} onBlur={editable ? (e) => onCommit?.(readText(e.currentTarget)) : undefined}>{text}</Tag>
+  if (isRichEmpty(value) && !show) return null
+  if (!editable) return <RichHtml as={Tag} value={value} className={className} style={style} />
+  return <RichEditable as={Tag} value={value} onCommit={onCommit} placeholder={placeholder} className={className} style={style} singleLine={/^(h[1-6]|strong|li)$/.test(Tag)} />
 }
 
 export function ReadyBlockView({ block, onEdit, onUploadImage, placeholders = false }) {
@@ -75,7 +70,7 @@ export function ReadyBlockCenter({block}) {
 }
 
 const isLightHex = (hex) => { let h = String(hex || '').replace('#',''); if (h.length === 3) h = [...h].map(c => c + c).join(''); if (!/^[0-9a-f]{6}$/i.test(h)) return false; const n = parseInt(h, 16); return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255 > 0.6 }
-const layoutPresets = (template) => (template === 'heading-list' ? [['Numbered', {listStyle:'number',style:{accentColor:'#2563eb',background:'#fff',borderWidth:1,borderColor:'#dbeafe',borderRadius:12}}],['Icon List',{listStyle:'bullet',style:{accentColor:'#0d9488',background:'#f0fdfa',borderWidth:1,borderColor:'#99f6e4',borderRadius:14}}],['Checklist',{listStyle:'bullet',style:{accentColor:'#16a34a',background:'#f0fdf4',borderWidth:1,borderColor:'#bbf7d0',borderRadius:10}}],['Timeline',{listStyle:'number',style:{accentColor:'#7c3aed',background:'#faf5ff',borderWidth:1,borderColor:'#ddd6fe',borderRadius:10}}]] : template === 'heading-example' ? [['Highlight Box',{style:{accentColor:'#d97706',background:'#fffbeb',borderWidth:1,borderColor:'#fde68a',borderRadius:12}}],['Note Card',{style:{accentColor:'#0284c7',background:'#f0f9ff',borderWidth:1,borderColor:'#bae6fd',borderRadius:12}}],['Pro Tip',{style:{accentColor:'#16a34a',background:'#f0fdf4',borderWidth:1,borderColor:'#bbf7d0',borderRadius:12}}],['Case Study',{style:{accentColor:'#7c3aed',background:'#faf5ff',borderWidth:1,borderColor:'#ddd6fe',borderRadius:12}}]] : template === 'heading-image' ? [['Image Left',{style:{imageFit:'contain',accentColor:'#2563eb',background:'#eff6ff',borderRadius:12}}],['Image Right',{style:{imageFit:'cover',accentColor:'#0d9488',background:'#f0fdfa',borderRadius:12}}],['Full Width',{imageFit:'cover',fullWidth:true,style:{accentColor:'#2563eb',background:'#fff',borderRadius:8}}],['Image Card',{style:{imageFit:'cover',accentColor:'#7c3aed',background:'#faf5ff',borderWidth:1,borderRadius:16,shadow:'soft'}}]] : [['Modern',{style:{accentColor:'#2563eb',background:'#eff6ff',borderWidth:1,borderColor:'#bfdbfe',borderRadius:12,shadow:'soft'}}],['Minimal',{style:{accentColor:'#64748b',background:'#fff',borderWidth:0,borderRadius:4,shadow:'none'}}],['Bordered',{style:{accentColor:'#0d9488',background:'#fff',borderWidth:2,borderColor:'#99f6e4',borderRadius:8}}],['Gradient',{style:{accentColor:'#7c3aed',background:'#f5f3ff',borderWidth:0,borderRadius:14,shadow:'soft'}}],['Card',{style:{accentColor:'#2563eb',background:'#fff',borderWidth:1,borderColor:'#dbe4f3',borderRadius:16,shadow:'soft'}}]])
+const layoutPresets = (template) => (template === 'heading-list' ? [['Numbered', {listStyle:'number',style:{accentColor:'#2563eb',background:'#fff',borderWidth:1,borderColor:'#dbeafe',borderRadius:12}}],['Icon List',{listStyle:'bullet',style:{accentColor:'#0d9488',background:'#f0fdfa',borderWidth:1,borderColor:'#99f6e4',borderRadius:14}}],['Checklist',{listStyle:'bullet',style:{accentColor:'#16a34a',background:'#f0fdf4',borderWidth:1,borderColor:'#bbf7d0',borderRadius:10}}],['Timeline',{listStyle:'number',style:{accentColor:'#7c3aed',background:'#faf5ff',borderWidth:1,borderColor:'#ddd6fe',borderRadius:10}}]] : template === 'heading-example' ? [['Highlight',{style:{accentColor:'#d97706',background:'#fffbeb',borderWidth:1,borderColor:'#fde68a',borderRadius:12}}],['Note ',{style:{accentColor:'#0284c7',background:'#f0f9ff',borderWidth:1,borderColor:'#bae6fd',borderRadius:12}}],['Pro Tip',{style:{accentColor:'#16a34a',background:'#f0fdf4',borderWidth:1,borderColor:'#bbf7d0',borderRadius:12}}],['Case Study',{style:{accentColor:'#7c3aed',background:'#faf5ff',borderWidth:1,borderColor:'#ddd6fe',borderRadius:12}}]] : template === 'heading-image' ? [['Image Left',{style:{imageFit:'contain',accentColor:'#2563eb',background:'#eff6ff',borderRadius:12}}],['Image Right',{style:{imageFit:'cover',accentColor:'#0d9488',background:'#f0fdfa',borderRadius:12}}],['Full Width',{imageFit:'cover',fullWidth:true,style:{accentColor:'#2563eb',background:'#fff',borderRadius:8}}],['Image Card',{style:{imageFit:'cover',accentColor:'#7c3aed',background:'#faf5ff',borderWidth:1,borderRadius:16,shadow:'soft'}}]] : [['Modern',{style:{accentColor:'#2563eb',background:'#eff6ff',borderWidth:1,borderColor:'#bfdbfe',borderRadius:12,shadow:'soft'}}],['Minimal',{style:{accentColor:'#64748b',background:'#fff',borderWidth:0,borderRadius:4,shadow:'none'}}],['Bordered',{style:{accentColor:'#0d9488',background:'#fff',borderWidth:2,borderColor:'#99f6e4',borderRadius:8}}],['Gradient',{style:{accentColor:'#7c3aed',background:'#f5f3ff',borderWidth:0,borderRadius:14,shadow:'soft'}}],['Card',{style:{accentColor:'#2563eb',background:'#fff',borderWidth:1,borderColor:'#dbe4f3',borderRadius:16,shadow:'soft'}}]])
 
 /** Dark / Light ready-made designs. Switching the tab only changes which templates are listed; a template is applied only when clicked. */
 function ReadyDesigns({ block, d, patch, ui, setUi }) {
@@ -83,13 +78,12 @@ function ReadyDesigns({ block, d, patch, ui, setUi }) {
   const layouts = layoutPresets(block.template)
   return <Section title="Ready-made Designs">
     <div className="design-tabs" role="tablist" aria-label="Design theme">
-      <button type="button" role="tab" aria-selected={mode==='dark'} className={mode==='dark'?'on':''} onClick={()=>setUi({designTheme:'dark'})}><LuMoon/> Dark Themes</button>
-      <button type="button" role="tab" aria-selected={mode==='light'} className={mode==='light'?'on':''} onClick={()=>setUi({designTheme:'light'})}><LuSun/> Light Themes</button>
+      <button type="button" role="tab" aria-selected={mode==='dark'} className={mode==='dark'?'on':''} onClick={()=>setUi({designTheme:'dark'})}><LuMoon/> Dark</button>
+      <button type="button" role="tab" aria-selected={mode==='light'} className={mode==='light'?'on':''} onClick={()=>setUi({designTheme:'light'})}><LuSun/> Light</button>
     </div>
     <div className="ready-design-grid themed">{THEME_TEMPLATES.map(t=><button type="button" key={t.id} title={t.sub} onClick={()=>patch({style:{...d.style,...themeTemplateStyle(t,mode)}})}><span className="ready-design-swatch" style={{background:t[mode].background,borderColor:t[mode].accentColor}}/><span className="ready-design-name"><b>{t.label}</b></span></button>)}</div>
     <p className="ui-hint">Dark is the default. A template is applied only when you click it.</p>
-    <span className="sc-label d-block mt-2 mb-1">Layout styles</span>
-    <div className="ready-design-grid">{layouts.map(([name,preset])=><button type="button" key={name} onClick={()=>{const {style:stPatch,...rest}=preset;patch({...rest,style:{...d.style,...(stPatch||{}),...(isLightHex(stPatch?.background) ? {textColor:'#0f172a',headingColor:'#0f172a'} : {}),theme:'custom'}})}}><span className="ready-design-swatch" style={{background:preset.style?.background||d.style.background,borderColor:preset.style?.accentColor||d.style.accentColor}}/><b>{name}</b></button>)}</div>
+
   </Section>
 }
 
@@ -119,7 +113,7 @@ export function ReadyBlockProps({block,setBlock,setData,ui,setUi,onSave,dirty}) 
         <AutoGrow label="Section Heading" value={d.heading} placeholder={PLACEHOLDERS.heading} onChange={v=>patch({heading:v})}/>
         {block.template !== 'heading-list' && <TextArea label={block.template === 'heading-image' ? 'Description / Explanation' : 'Paragraph Content'} value={d.body} placeholder={PLACEHOLDERS.body} onChange={v=>patch({body:v})}/>}
         {block.template === 'heading-image' && <Section title="Image Content"><div className="ready-upload">{d.image ? <img src={d.image} alt={d.imageAlt || 'Uploaded lesson image'}/> : <div><LuImage/><span>No image selected</span></div>}<label className="btn ui-btn ui-btn-secondary w-100">{uploading ? 'Uploading…' : <><LuUpload/> Choose Image</>}<input hidden type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={e=>{upload(e.target.files?.[0]);e.target.value=''}}/></label>{d.image && <button className="btn ui-btn ui-btn-danger w-100 mt-2" onClick={()=>patch({image:''})}><LuTrash2/> Remove Image</button>}</div><FieldInput label="Image Alt Text" value={d.imageAlt} placeholder={PLACEHOLDERS.imageAlt} onChange={v=>patch({imageAlt:v})}/><FieldInput label="Image Caption" value={d.caption} placeholder={PLACEHOLDERS.caption} onChange={v=>patch({caption:v})}/><Field label="Image Fit"><select className="ui-input ui-select" value={d.style.imageFit} onChange={e=>style({imageFit:e.target.value})}><option value="contain">Contain</option><option value="cover">Cover</option></select></Field></Section>}
-        {block.template === 'heading-list' && <Section title="List Items"><Field label="List Style"><div className="ui-chip-row"><button className={`ui-chip ${d.listStyle==='bullet'?'on':''}`} onClick={()=>patch({listStyle:'bullet'})}>Bullets</button><button className={`ui-chip ${d.listStyle==='number'?'on':''}`} onClick={()=>patch({listStyle:'number'})}>Numbered</button></div></Field>{d.items.map((x,i)=><div className="d-flex gap-2 align-items-center mb-2" key={i}><span className="text-soft">{i+1}.</span><input className="ui-input" value={x} placeholder={PLACEHOLDERS.item} onChange={e=>setItem(i,e.target.value)}/><button className="icon-mini danger" onClick={()=>patch({items:d.items.filter((_,n)=>n!==i)})}><LuX/></button></div>)}<button className="btn ui-btn ui-btn-secondary w-100" onClick={()=>patch({items:[...d.items,'']})}><LuPlus/> Add Item</button></Section>}
+        {block.template === 'heading-list' && <Section title="List Items"><Field label="List Style"><div className="ui-chip-row"><button className={`ui-chip ${d.listStyle==='bullet'?'on':''}`} onClick={()=>patch({listStyle:'bullet'})}>Bullets</button><button className={`ui-chip ${d.listStyle==='number'?'on':''}`} onClick={()=>patch({listStyle:'number'})}>Numbered</button></div></Field>{d.items.map((x,i)=><div className="d-flex gap-2 align-items-center mb-2" key={i}><span className="text-soft">{i+1}.</span><RichEditable className="ui-input rt-field single flex-grow-1" singleLine value={x} placeholder={PLACEHOLDERS.item} onCommit={v=>setItem(i,v)}/><button className="icon-mini danger" onClick={()=>patch({items:d.items.filter((_,n)=>n!==i)})}><LuX/></button></div>)}<button className="btn ui-btn ui-btn-secondary w-100" onClick={()=>patch({items:[...d.items,'']})}><LuPlus/> Add Item</button></Section>}
         {block.template === 'heading-example' && <Section title="Example Box"><FieldInput label="Example Label" value={d.exampleTitle} placeholder={PLACEHOLDERS.exampleTitle} onChange={v=>patch({exampleTitle:v})}/><TextArea label="Example Explanation" value={d.exampleText} placeholder={PLACEHOLDERS.exampleText} onChange={v=>patch({exampleText:v})}/></Section>}
       </>}
       <div className="prop-row"><span>Show in Chapter</span><Toggle checked={block.visible !== false} onChange={v=>setBlock({visible:v})} small/></div>
