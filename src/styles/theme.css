@@ -115,10 +115,10 @@ button { font-family: inherit; }
   font-family: var(--rk-font-head);
 }
 .rk-about-modal { max-width: 620px; }
-.rk-login-logo { width: 76px; height: 76px; object-fit: contain; margin-bottom: 4px; filter: drop-shadow(0 0 1px #fff); }
+.rk-login-logo { width: 76px; height: 76px; object-fit: contain; margin-bottom: 4px; filter: drop-shadow(0 0 1px #91a8da); } 
 .rk-login-title { font-family: var(--rk-font-head); font-weight: 700; font-size: 2rem; margin: 0; letter-spacing: -.01em; }
 .rk-login-sub { color: #c4cee0; margin: 4px 0 0; font-size: .98rem; }
-.rk-label { display: inline-block; font-weight: 600; font-size: .92rem; margin-bottom: 6px; color: #fff; }
+.rk-label { display: inline-block; font-weight: 600; font-size: .92rem; margin-bottom: 6px; color: #91a8da; }
 .rk-label .req { color: #ff4d5e; } .rk-label .opt { color: var(--rk-muted); font-weight: 400; }
 .rk-input-group { position: relative; display: flex; align-items: center; }
 .rk-input-icon { position: absolute; left: 16px; color: #cfd8ea; font-size: 1.15rem; pointer-events: none; }
@@ -154,8 +154,8 @@ button { font-family: inherit; }
 .pf-foot .rk-btn-primary, .pf-foot .rk-btn-outline { min-width: 104px; height: 46px; }
 .pf-foot .rk-btn-primary { background: linear-gradient(180deg, #1aa3ff, #0a86f5); }
 .rk-field {
-  width: 100%; height: 40px; padding: 0 14px; color: #fff; font-size: .93rem;
-  background: rgba(3, 12, 30, .55); border: 1px solid rgba(110,165,255,.55); border-radius: 9px; transition: border-color .15s, box-shadow .15s;
+  width: 100%; height: 40px; padding: 0 14px; color: #dce9fd8c; font-size: .93rem;
+  background: rgba(3, 12, 30, .55); border: 1px solid rgba(64, 85, 119, 0.55); border-radius: 9px; transition: border-color .15s, box-shadow .15s;
 }
 .rk-field::placeholder { color: #8d9bb8; }
 .rk-field:focus { outline: none; border-color: var(--rk-primary-2); box-shadow: 0 0 0 3px rgba(26,167,255,.18); }
@@ -1315,11 +1315,11 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
+  padding: 0px 12px;
   border-radius: 6px;
   font-size: 0.88rem;
   color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: 10px;
 }
 
 .review-opt.is-correct {
@@ -1865,4 +1865,8 @@ button { font-family: inherit; }
   .chapter-artboard .rt-sticky {
     top: calc(var(--bld-head, 64px) + 98px) !important;
   }
+}
+
+.mcq-clean-card{
+  display: none;
 }

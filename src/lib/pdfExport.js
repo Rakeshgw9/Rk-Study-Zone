@@ -47,7 +47,7 @@ img,figure,tr,pre,blockquote,li{break-inside:avoid;page-break-inside:avoid}
 h1,h2,h3,h4,h5{break-after:avoid;page-break-after:avoid}
 `
 
-const READY = ['heading-paragraph', 'heading-image', 'heading-list', 'heading-example', 'multi-heading']
+const READY = ['heading-paragraph', 'heading-image', 'heading-list', 'heading-example', 'multi-heading', 'image-to-text']
 const h = (tag, cls, inner) => (inner ? `<${tag} class="${cls}">${inner}</${tag}>` : '')
 
 function readyBlockHtml(block) {

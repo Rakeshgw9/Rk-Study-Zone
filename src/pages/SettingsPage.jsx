@@ -44,20 +44,10 @@ export default function SettingsPage() {
     setDetails(pickDetails(user))
   }, [user?.phone, user?.altEmail, user?.institution, user?.address, user?.city, user?.state, user?.pincode, user?.bio]) // eslint-disable-line react-hooks/exhaustive-deps
 
-
-const runMediaCheck = async () => {
-  setMedia('checking')
-
-  try {
-    const result = await checkMediaStorage()
-    setMedia(result)
-  } catch (error) {
-    console.error('Media storage check failed:', error)
-    setMedia({ configured: false })
+  const runMediaCheck = async () => {
+    setMedia('checking')
+    setMedia(await checkMediaStorage())
   }
-}
-
-
   useEffect(() => { if (isFirebaseConfigured) runMediaCheck() }, [])
 
   useEffect(() => {
@@ -323,15 +313,15 @@ const runMediaCheck = async () => {
               <dd>
                 {!isFirebaseConfigured ? <span className="pill pill-warn">Local demo (kept in this browser)</span>
                   : media === 'checking' || media === null ? <span className="pill">Checking…</span>
-        : media.configured ? <span className="pill pill-ok">Cloudinary (live)</span>
-        : <span className="pill pill-warn">Cloudinary not configured</span>}
+                  : media.configured ? <span className="pill pill-ok">GitHub (live)</span>
+                  : <span className="pill pill-warn">Not set up — images are saved inline</span>}
               </dd>
+              {media && media !== 'checking' && media.configured && (<><dt>Repository</dt><dd>{media.repo} · {media.branch}</dd></>)}
             </dl>
-       <p className="small text-muted-soft mb-0">
-  Uploaded profile photos, lesson images and syllabus files are stored in Cloudinary through a secure Netlify function.
-  {isFirebaseConfigured && media && media !== 'checking' && !media.configured &&
-    ' Please check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Netlify → Environment variables.'}
-</p>
+            <p className="small text-muted-soft mb-0">
+              Uploaded photos, lesson images and syllabus files are committed to a GitHub repository (no Firebase Storage needed).
+              {isFirebaseConfigured && media && media !== 'checking' && !media.configured && ' To enable it add GITHUB_TOKEN and GITHUB_REPO in Netlify → Environment variables (see MEDIA_SETUP.md).'}
+            </p>
           </div>
 
           <div className="glass-panel p-4 mt-3">
@@ -348,7 +338,7 @@ const runMediaCheck = async () => {
               <dt>Project</dt><dd>{firebaseProjectId || '—'}</dd>
               <dt>Authentication</dt><dd>Email/Password + Google Sign-In</dd>
               <dt>Database</dt><dd>Cloud Firestore (lessons, notes, progress)</dd>
-              <dt>Media</dt><dd>Cloudinary (via secure Netlify function)</dd>
+              <dt>Media</dt><dd>GitHub repository (via Netlify function)</dd>
             </dl>
             <p className="small text-muted-soft">
               Draft content is saved in <code>portalContent</code>; students read <code>portalPublished</code> after you press Publish.

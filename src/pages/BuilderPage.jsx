@@ -36,6 +36,7 @@ import { JsonCenter, JsonProps } from '../components/builder/JsonBlockEditor'
 import { McqCenter, McqProps } from '../components/builder/McqBlockEditor'
 import { SliderCenter, SliderProps, YoutubeCenter, YoutubeProps } from '../components/builder/MediaBlocks'
 import { ReadyBlockCenter, ReadyBlockProps } from '../components/builder/ReadyBlockEditor'
+import { OcrProps } from '../components/builder/ImageToTextBlock'
 import { TableCenter, TableProps } from '../components/builder/TableBlockEditor'
 import { RichTextProvider } from '../components/ui/RichText'
 import { validateTable } from '../lib/table'
@@ -69,6 +70,7 @@ const EDITORS = {
   'heading-list': [ReadyBlockCenter, ReadyBlockProps],
   'heading-example': [ReadyBlockCenter, ReadyBlockProps],
   'multi-heading': [ReadyBlockCenter, ReadyBlockProps],
+  'image-to-text': [ReadyBlockCenter, OcrProps],
 }
 
 /**
@@ -84,6 +86,7 @@ export function isRichTextBlock(block) {
     'heading-list',
     'heading-example',
     'multi-heading',
+    'image-to-text',
     'table',
   ]
   return supported.includes(block.type)

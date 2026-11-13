@@ -4,7 +4,7 @@ import { richToText } from './richText'
 /* Shared naming logic — used by the builder left tree AND the student sidebar,
    so both always show the same label for a block. */
 
-const READY = ['heading-paragraph', 'heading-image', 'heading-list', 'heading-example', 'multi-heading']
+const READY = ['heading-paragraph', 'heading-image', 'heading-list', 'heading-example', 'multi-heading', 'image-to-text']
 // Titles that were auto-generated for older blocks. They are not "real" headings.
 const GENERIC_TITLES = new Set(['Custom HTML / CSS / JS', 'Lesson Content (Structured)', 'Chapter Practice Test', ...Object.values(BLOCK_TYPES).map((t) => t.label)])
 
@@ -23,7 +23,7 @@ export const blockTypeLabel = (type) => BLOCK_TYPES[type]?.label || 'Block'
 export function blockHeadingText(block) {
   const d = block?.data || {}
   switch (block?.type) {
-    case 'heading-paragraph': case 'heading-image': case 'heading-list': case 'heading-example':
+    case 'heading-paragraph': case 'heading-image': case 'heading-list': case 'heading-example': case 'image-to-text':
       return richToText(d.heading)
     case 'multi-heading':
       return richToText(d.sections?.find((s) => richToText(s.heading))?.heading)

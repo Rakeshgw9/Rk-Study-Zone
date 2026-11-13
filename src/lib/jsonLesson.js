@@ -73,8 +73,7 @@ export const STYLE_PRESETS = [
 export const DEFAULT_JSON_STYLE = {
   preset: 'default',
   titleFont: 'Inter', titleSize: 24, textFont: 'Inter', textSize: 16,
-  titleColor: '#0f172a', textColor: '#334155', accent: '#2563eb', headingBg: '#3730a3',
-  background: '#ffffff', padding: 20, margin: 0, radius: 14, borderColor: '#dbe4f3', borderWidth: 1,
+  titleColor: '#0f172a', textColor: '#334155', accent: '#2563eb', headingBg: '#3730a3', padding: 20, margin: 0, radius: 14, borderColor: '#dbe4f3', borderWidth: 1,
   listStyle: 'numbered', showIcon: true, icon: 'bi-book',
 }
 

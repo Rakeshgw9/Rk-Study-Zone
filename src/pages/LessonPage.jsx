@@ -143,7 +143,7 @@ function BlockView({ block, sd, onDone, onOpenExam, onNote }) {
     )
   }
 
-  if (['heading-paragraph', 'heading-image', 'heading-list', 'heading-example', 'multi-heading'].includes(block.type)) {
+  if (['heading-paragraph', 'heading-image', 'heading-list', 'heading-example', 'multi-heading', 'image-to-text'].includes(block.type)) {
     return (
       <section className={`lesson-block ${block.type}`} id={`b-${block.id}`}>
         <ReadyBlockView block={block} />

@@ -5390,81 +5390,192 @@ opacity: 1;
   .hbg-row {
     grid-template-columns: minmax(0, 1fr);
   }
-}/* ---- (5) Portal syllabus ---- */.syllabus-box {
+}
+
+/* =========================================================
+   RK STUDY ZONE — SYLLABUS COMPONENT
+   Bootstrap 5 | Dark Navy Theme
+   ========================================================= */
+
+/* Main Syllabus Box */
+.syllabus-box {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border: 2px solid #8b5cf6;
-  border-radius: 12px;
-  background: rgba(139, 92, 246, 0.08);
-  min-height: 78px;
-}.syllabus-box.is-invalid {
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1.5px solid #4055778c;
+  border-radius: 14px;
+;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+  box-sizing: border-box;
+}
+
+.syllabus-box.is-invalid {
   border-color: #ff4d5e;
-}.syllabus-ico {
-  width: 40px;
-  height: 40px;
-  flex: none;
+  box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.10);
+}
+
+/* Syllabus Icon */
+.syllabus-ico {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #cfd8ea;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #d5dfff;
   font-size: 1.4rem;
-}.syllabus-info {
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.syllabus-box:hover .syllabus-ico {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+  transform: translateY(-1px);
+}
+
+.syllabus-ico svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/* Syllabus Information */
+.syllabus-info {
+  flex: 1 1 0;
   min-width: 0;
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  line-height: 1.25;
-}.syllabus-info b {
+  gap: 3px;
+  line-height: 1.35;
+}
+
+.syllabus-info b {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #fff;
+  color: #91a8da;
   font-size: 0.95rem;
-}.syllabus-info small {
+  font-weight: 650;
+}
+
+.syllabus-info small {
+  display: block;
   color: #b7c3dc;
   font-size: 0.78rem;
-}.syllabus-remove {
-  flex: none;
-  width: 30px;
-  height: 30px;
+  line-height: 1.45;
+}
+
+/* Add Syllabus Button — Separate Bottom Row */
+.syllabus-box .syllabus-add {
+  flex: 0 0 100%;
+  width: 100%;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 0;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}.syllabus-remove:hover {
-  background: rgba(255, 77, 94, 0.3);
-}.syllabus-add {
-  flex: none;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding: 9px 16px;
+  border-radius: 10px;
   white-space: nowrap;
-}@media (max-width: 480px) {
-  .syllabus-box {
-    flex-wrap: wrap;
-  }
-  .syllabus-add {
-    width: 100%;
-  }
-}.tools-syllabus {
-    width: 100%;
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    text-align: left;
-    border-radius: 12px;
-    background: rgb(21 35 58);
-    border: 1px solid #354555;
-    color: var(--c-text);
-}.tools-syllabus:hover {
-  background: rgba(250, 204, 21, 0.12);
-}.tools-syllabus .ti {
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+.syllabus-box .syllabus-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(10, 132, 255, 0.32);
+}
+
+.syllabus-box .syllabus-add:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.syllabus-box .syllabus-add svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Remove Syllabus Button */
+.syllabus-remove {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.syllabus-remove:hover {
+  background: rgba(255, 77, 94, 0.18);
+  border-color: rgba(255, 77, 94, 0.3);
+  color: #ff7b8a;
+  transform: scale(1.05);
+}
+
+/* Hide File Input */
+.syllabus-box input[type="file"][hidden] {
+  display: none !important;
+}
+
+/* =========================================================
+   SYLLABUS TOOLS
+   ========================================================= */
+
+.tools-syllabus {
+  width: 100%;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  text-align: left;
+  border-radius: 12px;
+  background: rgb(21, 35, 58);
+  border: 1px solid #354555;
+  color: var(--rk-text);
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.2s ease;
+}
+
+.tools-syllabus:hover {
+  background: rgba(250, 204, 21, 0.10);
+  border-color: rgba(250, 204, 21, 0.4);
+  transform: translateY(-1px);
+}
+
+.tools-syllabus .ti {
   width: 38px;
   height: 38px;
   flex: none;
@@ -5474,41 +5585,64 @@ opacity: 1;
   justify-content: center;
   color: #fff;
   font-size: 1.15rem;
-}.tools-syllabus .ti.blue {
+}
+
+.tools-syllabus .ti.blue {
   background: #0a84ff;
-}.tools-syllabus b {
+}
+
+.tools-syllabus b {
   display: block;
   font-size: 0.88rem;
-}.tools-syllabus small {
+}
+
+.tools-syllabus small {
   display: block;
-  color: var(--c-soft);
+  color: var(--rk-muted);
   font-size: 0.74rem;
-}.syllabus-view {
+}
+
+/* =========================================================
+   SYLLABUS VIEWER
+   ========================================================= */
+
+.syllabus-view {
   min-height: 320px;
   padding: 0;
-  background: var(--c-bg);
-}.syllabus-frame {
+  background: var(--rk-bg);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.syllabus-frame {
   display: block;
   width: 100%;
   height: min(70vh, 720px);
   border: 0;
   background: #fff;
-}.syllabus-img {
+}
+
+.syllabus-img {
   display: block;
   max-width: 100%;
   max-height: 70vh;
   margin: 0 auto;
   object-fit: contain;
-}.syllabus-json {
+}
+
+.syllabus-json {
   margin: 0;
   padding: 16px;
   max-height: 70vh;
   overflow: auto;
-  color: var(--c-text);
-  font: 0.84rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--rk-text);
+  font: 0.84rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}.syllabus-msg {
+}
+
+/* Empty / Error Message */
+.syllabus-msg {
   min-height: 260px;
   display: flex;
   flex-direction: column;
@@ -5516,9 +5650,105 @@ opacity: 1;
   justify-content: center;
   gap: 10px;
   text-align: center;
-  color: var(--c-soft);
+  color: var(--rk-muted);
   padding: 20px;
-}/* ---- (6) YouTube + image slider blocks ---- */.media-block {
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+  .syllabus-box {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .syllabus-ico {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .syllabus-box .syllabus-add {
+    min-height: 40px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .syllabus-box {
+    gap: 9px;
+    padding: 11px;
+    border-radius: 12px;
+  }
+
+  .syllabus-ico {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    font-size: 1.2rem;
+    border-radius: 9px;
+  }
+
+  .syllabus-ico svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .syllabus-info {
+    gap: 2px;
+  }
+
+  .syllabus-info b {
+    font-size: 0.86rem;
+  }
+
+  .syllabus-info small {
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  .syllabus-box .syllabus-add {
+    flex-basis: 100%;
+    width: 100%;
+    min-height: 40px;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+  }
+
+  .syllabus-remove {
+    width: 30px;
+    height: 30px;
+  }
+
+  .syllabus-frame {
+    height: 65vh;
+  }
+}
+
+/* =========================================================
+   ACCESSIBILITY — REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .syllabus-box,
+  .syllabus-ico,
+  .syllabus-add,
+  .syllabus-remove,
+  .tools-syllabus {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+
+
+
+/* ---- (6) YouTube + image slider blocks ---- */.media-block {
   overflow-wrap: anywhere;
 }.media-block h2 {
   line-height: 1.3;

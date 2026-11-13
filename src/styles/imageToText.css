@@ -1,0 +1,57 @@
+/* Image → Text block — scoped to .itt-* classes only (nothing existing is restyled). */
+.itt-wrap{display:block}
+.itt-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.itt-pick-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:84px;padding:12px 8px;border-radius:12px;
+  border:1px solid var(--rk-border,rgba(96,150,255,.22));background:var(--rk-panel-solid,#0a1a38);color:var(--rk-text,#eef4ff);cursor:pointer;text-align:center;
+  transition:border-color .15s,background .15s,transform .05s}
+.itt-pick-btn svg{font-size:24px;color:var(--rk-primary-2,#1aa7ff)}
+.itt-pick-btn b{font-size:.92rem;font-weight:600}
+.itt-pick-btn small{font-size:.74rem;color:var(--rk-muted,#a9b8d6)}
+.itt-pick-btn:hover:not(:disabled){border-color:var(--rk-primary,#0a84ff);background:rgba(10,132,255,.12)}
+.itt-pick-btn:active:not(:disabled){transform:scale(.98)}
+.itt-pick-btn:disabled{opacity:.5;cursor:not-allowed}
+.itt-pick-btn:focus-visible,.itt-link:focus-visible{outline:2px solid var(--rk-primary,#0a84ff);outline-offset:2px}
+
+.itt-pages{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto}
+.itt-page{position:relative;display:flex;gap:10px;padding:10px;border-radius:12px;border:1px solid var(--rk-border,rgba(96,150,255,.22));background:var(--rk-panel,rgba(12,30,64,.72))}
+.itt-page-no{position:absolute;top:-8px;left:-8px;width:22px;height:22px;border-radius:50%;background:var(--rk-primary,#0a84ff);color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.itt-thumb{flex:0 0 72px;width:72px;height:92px;border-radius:8px;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;border:1px solid var(--rk-border,rgba(96,150,255,.22))}
+.itt-thumb img{max-width:100%;max-height:100%;display:block;transition:transform .15s}
+.itt-page-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+.itt-page-main>b{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.itt-page-actions{display:flex;flex-wrap:wrap;gap:6px}
+.itt-page-actions .icon-mini{width:34px;height:34px}
+.itt-link{align-self:flex-start;background:none;border:0;padding:2px 0;color:var(--rk-primary-2,#1aa7ff);font-size:.82rem;font-weight:600;cursor:pointer;text-decoration:underline}
+.itt-chip{align-self:flex-start;font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(31,182,255,.15);color:var(--rk-accent,#1fb6ff)}
+.itt-crop{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:2px}
+.itt-crop label{display:flex;flex-direction:column;gap:2px;font-size:.74rem;color:var(--rk-muted,#a9b8d6)}
+.itt-crop input[type=range]{width:100%}
+.itt-crop .itt-link{grid-column:1/-1}
+
+.itt-big{min-height:46px;font-weight:600}
+.itt-run{display:flex;flex-direction:column;gap:8px}
+.itt-run-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.84rem;color:var(--rk-muted,#a9b8d6)}
+.itt-progress{height:8px;border-radius:999px;background:rgba(96,150,255,.18);overflow:hidden}
+.itt-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--rk-primary,#0a84ff),var(--rk-accent,#1fb6ff));transition:width .2s}
+.itt-spin{animation:itt-rot 1s linear infinite;vertical-align:-2px}
+@keyframes itt-rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.itt-spin{animation:none}.itt-progress i,.itt-thumb img{transition:none}}
+
+.itt-msg{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:9px 11px;border-radius:10px;font-size:.82rem;line-height:1.4;border:1px solid transparent;overflow-wrap:anywhere}
+.itt-msg svg{flex:0 0 auto;margin-top:2px}
+.itt-msg.info{background:rgba(10,132,255,.12);border-color:rgba(10,132,255,.35)}
+.itt-msg.ok{background:rgba(29,185,84,.12);border-color:rgba(29,185,84,.4)}
+.itt-msg.warn{background:rgba(255,154,31,.12);border-color:rgba(255,154,31,.45)}
+.itt-msg.error{background:rgba(248,81,73,.12);border-color:rgba(248,81,73,.5)}
+
+.itt-text{min-height:200px;font-family:Inter,'Noto Sans Oriya','Noto Sans Odia',system-ui,sans-serif;line-height:1.55;resize:vertical;width:100%;box-sizing:border-box}
+.itt-apply-row{display:flex;gap:8px;margin-top:8px}
+@media (max-width:420px){.itt-pick{gap:8px}.itt-crop{grid-template-columns:1fr}}
+
+/* Tables produced by the converter — scoped to the Image to Text block only (builder + student view) */
+.blk-image-to-text .ready-richtext table,.lesson-block.image-to-text .ready-richtext table{width:100%;margin:8px 0}
+.blk-image-to-text .ready-richtext th,.blk-image-to-text .ready-richtext td,
+.lesson-block.image-to-text .ready-richtext th,.lesson-block.image-to-text .ready-richtext td{border:1px solid rgba(120,170,255,.35);padding:6px 10px;text-align:left;vertical-align:top}
+.blk-image-to-text .ready-richtext th,.lesson-block.image-to-text .ready-richtext th{background:rgba(10,132,255,.18)}
+.blk-image-to-text .ready-richtext h3,.lesson-block.image-to-text .ready-richtext h3{font-size:1.15em;margin:14px 0 6px}
+.blk-image-to-text .ready-richtext h4,.lesson-block.image-to-text .ready-richtext h4{font-size:1.02em;margin:12px 0 4px}

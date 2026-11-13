@@ -59,5 +59,14 @@
 .opt-exp-row { margin: -2px 0 10px 44px; }
 .review-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .review-opt { flex-wrap: wrap; }
-.review-opt-exp { margin-top: 6px; padding: 8px 12px; border-radius: 8px; background: rgba(59, 130, 246, .12); border-left: 3px solid #3b82f6; font-size: .9rem; }
+.review-opt-exp { 
+
+    margin-top: 6px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: .9rem;
+    color: #c1a200;
+}
+
+ }
 .mcq-opt-exp { margin-top: 3px; font-weight: 400; opacity: .9; }

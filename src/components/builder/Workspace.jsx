@@ -46,7 +46,7 @@ export function Welcome({ onCreate }) {
           <span className="ws-hero-ico">
             <LuLayers />
           </span>
-          <h2>Start Building Your Study Portal New</h2>
+          <h2>Start Building Your Study Portal</h2>
           <p>Create units, add chapters and design engaging content for your students.</p>
           <button type="button" className="btn ui-btn ui-btn-primary btn-lg" onClick={onCreate}>
             <LuCirclePlus /> Create First Unit
@@ -386,6 +386,7 @@ function ChapterBlockContent({ block, onEditData, onUploadImage, editor }) {
       'heading-list',
       'heading-example',
       'multi-heading',
+      'image-to-text',
     ].includes(block.type)
   ) {
     return <ReadyBlockView block={block} onEdit={onEditData} onUploadImage={onUploadImage} />

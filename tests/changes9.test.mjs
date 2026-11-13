@@ -2,6 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { parseMcqJson, exportMcqJson, normalizeQuestion } from '../src/lib/mcq.js'
+import { cleanFolder, publicUrl } from '../netlify/functions/upload-media.mjs'
 
 test('MCQ JSON: option explanations (array, object, option objects)', () => {
   const r = parseMcqJson(JSON.stringify({ questions: [
@@ -19,4 +20,9 @@ test('MCQ JSON: option explanations (array, object, option objects)', () => {
 
 test('old questions without option explanations still work', () => {
   assert.deepEqual(normalizeQuestion({ options: ['a', 'b', 'c'] }).optionExplanations, ['', '', ''])
+})
+
+test('upload function helpers', () => {
+  assert.equal(cleanFolder('../../Portals/My Portal!/x'), 'portals/my-portal/x')
+  assert.equal(publicUrl({ repo: 'me/media', branch: 'main', cdn: 'jsdelivr' }, 'media/a b.png'), 'https://cdn.jsdelivr.net/gh/me/media@main/media/a%20b.png')
 })

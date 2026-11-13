@@ -1402,7 +1402,6 @@ function ImageEditModal({ show, attrs = {}, onClose, onApply }) {
 export function HtmlProps({ block, setBlock, setData, ui, setUi, onSave, dirty }) {
   const d = block.data
   const st = {
-    background: '#ffffff',
     textColor: '#0f172a',
     fontFamily: 'Inter',
     fontSize: 16,

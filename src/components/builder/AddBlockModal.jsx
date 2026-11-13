@@ -13,8 +13,10 @@ const TYPES = [
   { type: 'heading-example', badge: 'EX', title: 'Example', desc: 'Highlighted examples.', tone: 'blue' },
   { type: 'youtube', badge: 'YT', title: 'YouTube', desc: 'Embedded video content.', tone: 'pink', isNew: true },
   { type: 'slider', badge: 'SLD', title: 'Image Slider', desc: 'Image carousel with autoplay.', tone: 'purple', isNew: true },
+  { type: 'image-to-text', badge: 'OCR', title: 'Image to Text', desc: 'Book page photo or PDF to editable text.', tone: 'teal', isNew: true },
 ];
 function Art({ type }) {
+  if (type === 'image-to-text') return <div className="ab-art ready-art"><span className="ra-image"><i /></span><b className="ra-heading" /><i /><i className="short" /></div>
   if (type === 'youtube') return <div className="ab-art ready-art"><span className="ra-video"><i /></span><b className="ra-heading" /></div>
   if (type === 'slider') return <div className="ab-art ready-art"><span className="ra-slider"><i className="l" /><i className="r" /></span><span className="ra-dots"><i className="on" /><i /><i /><i /></span></div>
   if (type === 'table') return <div className="ab-art ready-art"><span className="ra-table"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span></div>

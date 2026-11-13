@@ -1,38 +1,40 @@
-# RK Study Zone — Cloudinary media setup
+# Media uploads without Firebase Storage (GitHub)
 
-All newly uploaded images, profile photos, PDFs, JSON files, videos and audio files are stored in Cloudinary. Firebase Authentication verifies the user; Firestore stores media URLs and metadata. Firebase Storage is not used.
+Every image / PDF / JSON file you upload (profile photo, portal cover, lesson images, sliders, heading backgrounds,
+syllabus files …) is now saved in a **GitHub repository**. The browser never sees your GitHub token: it sends the file to a
+small Netlify Function (`netlify/functions/upload-media.mjs`) which checks the signed-in Firebase user and commits the file.
+The saved link looks like `https://cdn.jsdelivr.net/gh/<you>/<repo>@main/media/...`.
 
-## Netlify environment variables
+> If you skip this setup the app still works: images are compressed and stored inline (inside Firestore). That is fine for a few
+> small pictures, but GitHub storage is the right choice for real use (Firestore documents are limited to 1 MB).
 
-Set these in Netlify → Site configuration → Environment variables:
+## One-time setup (10 minutes)
 
-- `CLOUDINARY_CLOUD_NAME`
-- `CLOUDINARY_API_KEY`
-- `CLOUDINARY_API_SECRET`
-- `VITE_FIREBASE_API_KEY`
-- `VITE_FIREBASE_PROJECT_ID`
+1. **Create the media repository** on GitHub, e.g. `rk-study-zone-media`.
+   * Visibility: **Public** (so students can see the images).
+   * Tick **“Add a README file”** — the repo needs a `main` branch.
+   * Use a *separate* repo from the website so uploads do not trigger a new Netlify build each time.
+2. **Create a token**: GitHub → Settings → Developer settings → Personal access tokens → *Fine-grained tokens* → Generate.
+   * Repository access: *Only select repositories* → your media repo.
+   * Permissions → Repository permissions → **Contents: Read and write**.
+   * Copy the token (starts with `github_pat_…`).
+3. **Netlify** → your site → *Site configuration → Environment variables* → add:
 
-Keep `CLOUDINARY_API_SECRET` server-side only. Never use a `VITE_` prefix for it and never commit it in `.env`.
+   | Name | Value |
+   |------|-------|
+   | `GITHUB_TOKEN` | the token from step 2 |
+   | `GITHUB_REPO` | `your-github-name/rk-study-zone-media` |
+   | `GITHUB_BRANCH` | *(optional)* `main` |
+   | `MEDIA_DIR` | *(optional)* folder inside the repo, default `media` |
+   | `MEDIA_CDN` | *(optional)* `jsdelivr` (default) or `raw` |
 
-The app uses these Netlify Functions:
+   The `VITE_FIREBASE_*` variables you already have on Netlify are reused to verify the user — nothing else to add.
+4. **Push this project to GitHub** (it contains `netlify.toml` + the function) and let Netlify redeploy.
+5. Open **Settings → Media Storage → Check**. It must show **GitHub (live)**. Then upload a profile photo to test.
 
-- `/.netlify/functions/cloudinary-sign` — issues short-lived signed upload parameters.
-- `/.netlify/functions/cloudinary-delete` — deletes an asset after Firebase authentication and role checks.
-
-Only signed-in users can upload their own profile photo. Media uploads and deletes require a `teacher`, `admin`, or `superAdmin` role in `users/{uid}.role`.
-
-## Local development
-
-The signed functions run under Netlify Dev:
-
-```bash
-npx netlify dev
-```
-
-Plain `npm run dev` does not provide Netlify Functions, so Cloudinary upload checks will not succeed there.
-
-## Notes
-
-- Existing media URLs remain readable; this migration does not move or delete old GitHub-hosted files.
-- Deleting a syllabus file with Cloudinary metadata (`publicId`, `resourceType`) also requests deletion of that Cloudinary asset.
-- Existing GitHub URLs entered manually in the HTML block editor remain supported as external image URLs; they are not used as an upload backend.
+## Good to know
+* Who may upload: any signed-in user can upload their own profile photo; only **teachers and admins** can upload lesson media.
+* Max size per file: 4.5 MB (images are shrunk in the browser first). Syllabus PDFs up to 4 MB go to GitHub; bigger ones (up to 5 MB) fall back to Firestore.
+* Deleting a block / portal does not delete the file in GitHub (you can clean the repo any time).
+* Local development: plain `npm run dev` has no Netlify function, so uploads are stored inline. To test GitHub uploads locally run `npx netlify dev`.
+* Firebase Storage is **not used any more**. (Set `VITE_USE_FIREBASE_STORAGE=true` only if you ever upgrade to a paid plan and want it back.)

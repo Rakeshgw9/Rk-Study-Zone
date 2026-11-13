@@ -13,7 +13,7 @@ export function resolveAssets(text, assets = []) {
 }
 
 export function htmlBlockStyleCss(style = {}) {
-  const s = { background: '#ffffff', textColor: '#0f172a', fontFamily: 'Inter', fontSize: 16, textAlign: 'left', borderColor: '#dbe4f3', borderWidth: 0, borderRadius: 12, ...style }
+  const s = {  textColor: '#0f172a', fontFamily: 'Inter', fontSize: 16, textAlign: 'left',  borderWidth: 0, borderRadius: 12, ...style }
   const safeFont = ['Inter', 'Poppins', 'Georgia', 'Arial', 'system-ui', 'Noto Sans Oriya'].includes(s.fontFamily) ? s.fontFamily : 'Inter'
   const safeAlign = ['left', 'center', 'right', 'justify'].includes(s.textAlign) ? s.textAlign : 'left'
   return `html,body{min-height:100%;}body{box-sizing:border-box;background:${s.background};color:${s.textColor};font-family:'${safeFont}',sans-serif;font-size:${Number(s.fontSize) || 16}px;text-align:${safeAlign};border:${Math.max(0, Number(s.borderWidth) || 0)}px solid ${s.borderColor};border-radius:${Math.max(0, Number(s.borderRadius) || 0)}px;padding:${Math.max(0, Number(s.padding) || 0)}px;margin:0;}`

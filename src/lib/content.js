@@ -22,6 +22,7 @@ export const BLOCK_TYPES = {
   'heading-list': { label: 'Heading & List', sub: 'Key points list', short: 'LIST' },
   'heading-example': { label: 'Heading & Example', sub: 'Worked example', short: 'EX' },
   'multi-heading': { label: 'Multiple Heading Sections', sub: 'H1–H6 sections', short: 'H1–H6' },
+  'image-to-text': { label: 'Image to Text', sub: 'Book page photo / PDF → editable text', short: 'OCR' },
 }
 
 export const SAMPLE_HTML = `<div class="lesson-card">
@@ -55,6 +56,11 @@ export const YOUTUBE_DEFAULTS = { heading: '', url: '', description: '', caption
 export const SLIDER_DEFAULTS = { heading: '', slides: [], layout: 'full', height: 380, fit: 'cover', autoplay: true, speed: 5, loop: true, arrows: true, dots: true, buttonOn: false, buttonLabel: 'View More', buttonUrl: '', spacing: { padding: 24 } }
 
 export function newBlock(type) {
+  // Image to Text = a Heading & Paragraph block (same data + renderer) plus a small `ocr` record kept beside it.
+  if (type === 'image-to-text') {
+    const b = newBlock('heading-paragraph')
+    return { ...b, type, template: 'heading-paragraph', title: BLOCK_TYPES[type].label, data: { ...b.data, ocr: { rawText: '', lang: 'eng', pages: 0, confidence: null, at: null } } }
+  }
   const nativeTypes = ['heading-paragraph','heading-image','heading-list','heading-example','multi-heading']
   const base = { id: uid('blk'), type: nativeTypes.includes(type) ? type : type, template: nativeTypes.includes(type) ? type : type, visible: true, title: BLOCK_TYPES[type].label, updatedAt: Date.now() }
   const nativeStyle = { ...DARK_STYLE, fontFamily: 'Inter', fontSize: 16, headingSize: 24, textAlign: 'left' }
@@ -83,7 +89,6 @@ if (type === 'html') {
       copyButton: false,
       packages: [],
       style: {
-        background: '#ffffff',
         textColor: '#0f172a',
         fontFamily: 'Inter',
         fontSize: 16,
