@@ -1,0 +1,2072 @@
+/* ============================================================
+   JSON CONTENT STUDIO
+   Complete Deduplicated Stylesheet
+   Sidebar + Presets + Layer Tree + Artboard + Themes
+   Odia Color / Typography / Component Styles Separated
+   ============================================================ */
+
+
+/* ============================================================
+01. RIGHT SIDEBAR — THEME PICKER
+   ============================================================ */
+
+.jt-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.jt-current {
+    font-size: .8rem;
+    color: var(--text-soft, #94a3b8);
+}
+
+.jt-current code {
+    font-size: .72rem;
+    margin-left: 4px;
+}
+
+.jt-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: .82rem;
+}
+
+.jt-toggle {
+    border: 0;
+    background: transparent;
+    color: var(--accent, #38bdf8);
+    font-size: .76rem;
+    font-weight: 600;
+    padding: 2px 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.jt-toggle:hover {
+    text-decoration: underline;
+}
+
+.jt-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.jt-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 10px;
+    padding: 4px 2px;
+    cursor: pointer;
+    min-width: 0;
+    color: inherit;
+}
+
+.jt-swatch:hover {
+    background: rgba(148, 163, 184, .12);
+}
+
+.jt-swatch.on {
+    border-color: var(--accent, #38bdf8);
+    background: rgba(56, 189, 248, .10);
+}
+
+.jt-chip {
+    width: 100%;
+    max-width: 46px;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+}
+
+.jt-name {
+    font-size: .62rem;
+    line-height: 1.15;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.jt-badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    color: #fff;
+    background: #6366f1;
+}
+
+.jt-badge.jt-heading_paragraph { background: #2563eb; }
+.jt-badge.jt-structured_header { background: #7c3aed; }
+.jt-badge.jt-heading_list { background: #16a34a; }
+.jt-badge.jt-heading_table { background: #4f46e5; }
+.jt-badge.jt-heading_example { background: #d97706; }
+.jt-badge.jt-callout_formula { background: #db2777; }
+.jt-badge.jt-heading_image { background: #0891b2; }
+.jt-badge.jt-heading_youtube { background: #dc2626; }
+
+
+/* ============================================================
+02. RIGHT SIDEBAR — SECTION LIST
+   ============================================================ */
+
+.jt-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0 2px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: min(46vh, 420px);
+    overflow-y: auto;
+}
+
+.jt-card {
+    position: relative;
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 12px;
+    padding: 8px 10px;
+    background: rgba(148, 163, 184, .06);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.jt-card.on {
+    border-color: var(--accent, #38bdf8);
+    background: rgba(56, 189, 248, .10);
+}
+
+.jt-card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.jt-card-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 2px 0;
+    cursor: pointer;
+}
+
+.jt-num {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, .25);
+    font-size: .68rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.jt-card-title {
+    flex: 1;
+    min-width: 0;
+    font-size: .84rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.jt-card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.jt-card-actions {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+}
+
+.jt-pill {
+    display: inline-block;
+    max-width: 100%;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, .16);
+    color: var(--accent, #38bdf8);
+    border: 1px solid rgba(56, 189, 248, .35);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jt-pill.muted {
+    background: transparent;
+    color: var(--text-soft, #94a3b8);
+    border-color: rgba(148, 163, 184, .3);
+    font-weight: 600;
+}
+
+.jt-grip {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 30px;
+    border-radius: 7px;
+    color: var(--text-soft, #94a3b8);
+    cursor: grab;
+    user-select: none;
+    font-size: 15px;
+    letter-spacing: -2px;
+    line-height: 1;
+}
+
+.jt-grip:hover {
+    background: rgba(148, 163, 184, .2);
+}
+
+.jt-grip:active {
+    cursor: grabbing;
+}
+
+.dd-row.dd-before {
+    box-shadow: 0 -3px 0 0 var(--accent, #38bdf8);
+}
+
+.dd-row.dd-after {
+    box-shadow: 0 3px 0 0 var(--accent, #38bdf8);
+}
+
+.dd-row.js-dragging {
+    opacity: .4;
+}
+
+
+/* ============================================================
+03. RIGHT SIDEBAR — ADD SECTION
+   ============================================================ */
+
+.jt-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+.jt-add-label {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-soft, #94a3b8);
+}
+
+.jt-add select {
+    width: 100%;
+}
+
+.jt-override {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px dashed rgba(56, 189, 248, .5);
+    background: rgba(56, 189, 248, .07);
+}
+
+.jt-override-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.jt-link {
+    border: 0;
+    background: transparent;
+    color: var(--accent, #38bdf8);
+    font-size: .74rem;
+    font-weight: 600;
+    padding: 2px 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.jt-link:hover {
+    text-decoration: underline;
+}
+
+
+/* ============================================================
+04. RIGHT SIDEBAR — STYLE TAB
+   ============================================================ */
+
+.jt-style {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.jt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.jt-field > label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.jt-field > label b {
+    font-weight: 700;
+    color: var(--accent, #38bdf8);
+}
+
+.jt-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jt-range input[type="range"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.jt-seg {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.jt-seg button {
+    border: 1px solid rgba(148, 163, 184, .35);
+    background: transparent;
+    color: inherit;
+    border-radius: 8px;
+    font-size: .72rem;
+    padding: 6px 2px;
+    cursor: pointer;
+}
+
+.jt-seg button.on {
+    border-color: var(--accent, #38bdf8);
+    background: rgba(56, 189, 248, .14);
+    font-weight: 700;
+}
+
+.jt-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jt-color-row input[type="color"] {
+    width: 38px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, .4);
+    border-radius: 8px;
+    background: transparent;
+}
+
+.jt-hex {
+    flex: 1;
+    font-size: .74rem;
+    color: var(--text-soft, #94a3b8);
+}
+
+
+/* ============================================================
+05. SIDEBAR SCROLL + SAVE BAR
+   ============================================================ */
+
+.props {
+    padding-bottom: 12px;
+}
+
+.props-save-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 14px -4px 0;
+    padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(
+        to top,
+        var(--panel-bg, var(--bg-elev, #0f172a)) 70%,
+        transparent
+    );
+}
+
+.jt-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.jt-type {
+    margin: 0 0 12px;
+}
+
+.jt-type-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: .88rem;
+}
+
+.jt-table-wrap {
+    overflow-x: auto;
+    border: 1px solid rgba(148, 163, 184, .25);
+    border-radius: 8px;
+}
+
+.jt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .78rem;
+}
+
+.jt-table th,
+.jt-table td {
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+    border-top: 1px solid rgba(148, 163, 184, .2);
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.jt-table th {
+    border-top: 0;
+    background: rgba(148, 163, 184, .12);
+    white-space: nowrap;
+}
+
+.jt-table td:first-child {
+    white-space: nowrap;
+}
+
+.jt-guide.compact .json-help {
+    max-height: 220px;
+    overflow: auto;
+}
+
+.jt-guide .json-help {
+    max-height: 320px;
+    overflow: auto;
+    font-size: .78rem;
+    margin: 0;
+}
+
+.js-flash {
+    animation: jsFlash .9s ease;
+}
+
+@keyframes jsFlash {
+    0%, 100% { box-shadow: none; }
+    30% { box-shadow: 0 0 0 3px var(--js-accent, #38bdf8); }
+}
+
+.js-studio-wrap {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.js-legacy-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(245, 158, 11, .45);
+    background: rgba(245, 158, 11, .10);
+    border-radius: 10px;
+    font-size: .85rem;
+}
+
+.js-legacy-banner .grow {
+    flex: 1;
+    min-width: 200px;
+}
+
+.ed-fullscreen .json-artboard-content {
+    max-height: calc(100vh - 190px);
+}
+
+
+/* ============================================================
+06. PRESET SECTION BLOCKS
+   ============================================================ */
+
+.jt-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.jt-preset {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 12px;
+    background: rgba(148, 163, 184, .06);
+    color: inherit;
+    cursor: grab;
+    user-select: none;
+    transition: border-color .12s, background .12s, transform .12s;
+}
+
+.jt-preset:hover,
+.jt-preset:focus-visible {
+    border-color: var(--accent, #38bdf8);
+    background: rgba(56, 189, 248, .10);
+    outline: none;
+}
+
+.jt-preset:active {
+    cursor: grabbing;
+    transform: scale(.98);
+}
+
+.jt-preset.media {
+    border-style: dashed;
+}
+
+.jt-preset-t {
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.jt-preset-opt {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: .58rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    opacity: .65;
+}
+
+
+/* ============================================================
+07. LEFT SIDEBAR — JSON BLOCK LAYER TREE
+   ============================================================ */
+
+.tree-sections {
+    list-style: none;
+    margin: 2px 0 4px 20px;
+    padding: 0 0 0 8px;
+    border-left: 2px solid rgba(148, 163, 184, .28);
+}
+
+.tree-row.tree-sec {
+    min-height: 30px;
+    padding: 2px 6px;
+    gap: 6px;
+    border-radius: 8px;
+    flex-wrap: nowrap;
+}
+
+.tree-row.tree-sec .tree-sec-grip {
+    flex: none;
+    width: 14px;
+    color: #6b7280;
+    cursor: grab;
+    font-size: 13px;
+    letter-spacing: -2px;
+    line-height: 1;
+    user-select: none;
+    text-align: center;
+}
+
+.tree-row.tree-sec .jt-badge {
+    height: 18px;
+    min-width: 28px;
+    padding: 0 5px;
+    font-size: .58rem;
+}
+
+.tree-row.tree-sec .tree-sec-t {
+    flex: 1 1 0;
+    min-width: 0;
+    display: block;
+    font-size: .78rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-row.tree-sec .kebab {
+    flex: none;
+}
+
+.tree-row.tree-sec.on {
+    box-shadow: inset 3px 0 0 #38bdf8;
+}
+
+.tree-sections > li.drop-over > .tree-row {
+    border-color: var(--accent, #38bdf8);
+    background: rgba(56, 189, 248, .12);
+}
+
+.tree-row.block .tree-sec-toggle {
+    flex: none;
+}
+
+
+/* ============================================================
+08. ARTBOARD — BASE VARIABLES
+   ============================================================ */
+
+.json-artboard-content {
+    --js-bg: #0f172a;
+    --js-surface: #1e293b;
+    --js-text: #cbd5e1;
+    --js-heading: #f1f5f9;
+    --js-accent: #38bdf8;
+    --js-border: #334155;
+
+    /* General artboard typography */
+    --js-font: Inter, "Noto Sans Oriya", "Noto Sans Odia", system-ui, sans-serif;
+    --js-b-size: 16px;
+    --js-lh: 1.65;
+    --js-ls: normal;
+    --js-weight: 400;
+    --js-align: left;
+    --js-h-size: 1.35em;
+
+    /* Odia typography — independent controls */
+    --js-odia-font: "Noto Sans Oriya", "Noto Sans Odia", sans-serif;
+
+    --js-odia-text-size: .98em;
+    --js-odia-text-weight: 400;
+    --js-odia-text-line-height: 1.9;
+    --js-odia-text-letter-spacing: 0;
+    --js-odia-text-align: justify;
+
+    --js-odia-heading-size: 1.08em;
+    --js-odia-heading-weight: 700;
+    --js-odia-heading-line-height: 1.7;
+    --js-odia-heading-letter-spacing: 0;
+    --js-odia-heading-align: left;
+
+    /* Mobile Odia typography */
+    --js-odia-text-mobile-size: .96em;
+    --js-odia-heading-mobile-size: 1.02em;
+
+    box-sizing: border-box;
+    position: relative;
+    background: var(--js-bg);
+    color: var(--js-text);
+    border-radius: 14px;
+    padding: 20px;
+    max-height: 1000px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    font-family: var(--js-font);
+    font-size: var(--js-b-size);
+    line-height: var(--js-lh);
+    letter-spacing: var(--js-ls);
+    font-weight: var(--js-weight);
+    scrollbar-width: thin;
+    scrollbar-color: var(--js-accent) transparent;
+    text-align: var(--js-align);
+    max-width: 100%;
+    color-scheme: dark;
+}
+
+.json-artboard-content * {
+    box-sizing: border-box;
+}
+
+.json-artboard-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.json-artboard-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.json-artboard-content::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--js-accent) 55%, transparent);
+    border-radius: 99px;
+    border: 2px solid var(--js-bg);
+}
+
+.json-artboard-content.in-frame,
+.json-artboard-content.js-full {
+    max-height: none;
+    overflow: visible;
+}
+
+
+/* ============================================================
+09. ARTBOARD — DARK THEMES
+   ============================================================ */
+
+/* Midnight Slate */
+.json-artboard-content[data-theme="midnight-slate"],
+.json-artboard-content .js-sec[data-theme="midnight-slate"] {
+    --js-bg: #0f172a;
+    --js-surface: #010711;
+    --js-text: #c1f1fd;
+    --js-heading: #dbf5ff;
+    --js-heading-odia: rgb(221, 143, 75);
+    --js-heading-odia-bold: rgb(255 179 0);
+    --js-heading-text: #fff;
+    --js-accent: #20cdf8;
+    --js-border: #2f4461;
+    color-scheme: dark;
+}
+
+/* Obsidian Gold */
+.json-artboard-content[data-theme="obsidian-gold"],
+.json-artboard-content .js-sec[data-theme="obsidian-gold"] {
+    --js-bg: #0b0b0c;
+    --js-surface: #18181b;
+    --js-text: #d6d3d1;
+    --js-heading: #fde68a;
+    --js-accent: #f5b301;
+    --js-border: #3f3a2a;
+    color-scheme: dark;
+}
+
+/* Deep Ocean */
+.json-artboard-content[data-theme="deep-ocean"],
+.json-artboard-content .js-sec[data-theme="deep-ocean"] {
+    --js-bg: #04141f;
+    --js-surface: #0a2536;
+    --js-text: #bfe3f5;
+    --js-heading: #e0f7ff;
+    --js-accent: #22d3ee;
+    --js-border: #164e63;
+    color-scheme: dark;
+}
+
+/* Emerald Night */
+.json-artboard-content[data-theme="emerald-night"],
+.json-artboard-content .js-sec[data-theme="emerald-night"] {
+    --js-bg: #04120d;
+    --js-surface: #0b2a1f;
+    --js-text: #bfe8d4;
+    --js-heading: #d1fae5;
+    --js-accent: #34d399;
+    --js-border: #14532d;
+    color-scheme: dark;
+}
+
+/* Royal Indigo */
+.json-artboard-content[data-theme="royal-indigo"],
+.json-artboard-content .js-sec[data-theme="royal-indigo"] {
+    --js-bg: #0f0c29;
+    --js-surface: #1b1747;
+    --js-text: #c7d2fe;
+    --js-heading: #e0e7ff;
+    --js-accent: #818cf8;
+    --js-border: #3730a3;
+    color-scheme: dark;
+}
+
+/* Carbon Crimson */
+.json-artboard-content[data-theme="carbon-crimson"],
+.json-artboard-content .js-sec[data-theme="carbon-crimson"] {
+    --js-bg: #111111;
+    --js-surface: #1c1c1f;
+    --js-text: #d4d4d8;
+    --js-heading: #fecaca;
+    --js-accent: #f43f5e;
+    --js-border: #4c1d24;
+    color-scheme: dark;
+}
+
+/* Cyber Teal */
+.json-artboard-content[data-theme="cyber-teal"],
+.json-artboard-content .js-sec[data-theme="cyber-teal"] {
+    --js-bg: #06151a;
+    --js-surface: #0c2a30;
+    --js-text: #b6ece6;
+    --js-heading: #ccfbf1;
+    --js-accent: #14b8a6;
+    --js-border: #115e59;
+    color-scheme: dark;
+}
+
+/* Graphite Amber */
+.json-artboard-content[data-theme="graphite-amber"],
+.json-artboard-content .js-sec[data-theme="graphite-amber"] {
+    --js-bg: #18181b;
+    --js-surface: #27272a;
+    --js-text: #d4d4d8;
+    --js-heading: #fef3c7;
+    --js-accent: #f59e0b;
+    --js-border: #52525b;
+    color-scheme: dark;
+}
+
+
+/* ============================================================
+10. ARTBOARD — LIGHT THEMES
+   ============================================================ */
+
+/* Pure Paper */
+.json-artboard-content[data-theme="pure-paper"],
+.json-artboard-content .js-sec[data-theme="pure-paper"] {
+    --js-bg: #ffffff;
+    --js-surface: #f8fafc;
+    --js-text: #334155;
+    --js-heading: #0f172a;
+    --js-accent: #2563eb;
+    --js-border: #dbe4f3;
+    color-scheme: light;
+}
+
+/* Warm Ivory */
+.json-artboard-content[data-theme="warm-ivory"],
+.json-artboard-content .js-sec[data-theme="warm-ivory"] {
+    --js-bg: #fffbf0;
+    --js-surface: #fdf3dc;
+    --js-text: #44403c;
+    --js-heading: #292524;
+    --js-accent: #b45309;
+    --js-border: #eadcb8;
+    color-scheme: light;
+}
+
+/* Mint Breeze */
+.json-artboard-content[data-theme="mint-breeze"],
+.json-artboard-content .js-sec[data-theme="mint-breeze"] {
+    --js-bg: #f0fdf9;
+    --js-surface: #d9f7ec;
+    --js-text: #1f4d3f;
+    --js-heading: #064e3b;
+    --js-accent: #059669;
+    --js-border: #bfe9d6;
+    color-scheme: light;
+}
+
+/* Sky Pastel */
+.json-artboard-content[data-theme="sky-pastel"],
+.json-artboard-content .js-sec[data-theme="sky-pastel"] {
+    --js-bg: #f0f9ff;
+    --js-surface: #e0f2fe;
+    --js-text: #1e3a52;
+    --js-heading: #0c4a6e;
+    --js-accent: #0284c7;
+    --js-border: #bae0f5;
+    color-scheme: light;
+}
+
+/* Lavender Mist */
+.json-artboard-content[data-theme="lavender-mist"],
+.json-artboard-content .js-sec[data-theme="lavender-mist"] {
+    --js-bg: #f7f5ff;
+    --js-surface: #ece8fd;
+    --js-text: #3b3560;
+    --js-heading: #2e1065;
+    --js-accent: #7c3aed;
+    --js-border: #d8d0f5;
+    color-scheme: light;
+}
+
+/* Peach Cream */
+.json-artboard-content[data-theme="peach-cream"],
+.json-artboard-content .js-sec[data-theme="peach-cream"] {
+    --js-bg: #fff7f2;
+    --js-surface: #ffe9dc;
+    --js-text: #5a3a2e;
+    --js-heading: #7c2d12;
+    --js-accent: #ea580c;
+    --js-border: #f6d2bd;
+    color-scheme: light;
+}
+
+/* Soft Sage */
+.json-artboard-content[data-theme="soft-sage"],
+.json-artboard-content .js-sec[data-theme="soft-sage"] {
+    --js-bg: #f4f7f2;
+    --js-surface: #e5eddf;
+    --js-text: #3a4a35;
+    --js-heading: #1f3a1a;
+    --js-accent: #5f8a4d;
+    --js-border: #cddcc4;
+    color-scheme: light;
+}
+
+/* Classic Sepia */
+.json-artboard-content[data-theme="classic-sepia"],
+.json-artboard-content .js-sec[data-theme="classic-sepia"] {
+    --js-bg: #f6efe2;
+    --js-surface: #ebdfc7;
+    --js-text: #4a3b28;
+    --js-heading: #3b2a14;
+    --js-accent: #92400e;
+    --js-border: #d6c3a0;
+    color-scheme: light;
+}
+
+
+/* ============================================================
+11. ARTBOARD — SECTION COMPONENTS
+   ============================================================ */
+
+.json-artboard-content .js-sec {
+    position: relative;
+    background: var(--js-surface);
+    color: var(--js-text);
+    border: 1px solid var(--js-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 0 0 14px;
+}
+
+.json-artboard-content .js-sec:last-child {
+    margin-bottom: 0;
+}
+
+.json-artboard-content .js-sec.js-active {
+    outline: 2px solid var(--js-accent);
+    outline-offset: 2px;
+}
+
+.json-artboard-content .js-pill {
+    display: inline-block;
+    font-size: .72em;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    line-height: 1.4;
+    padding: 3px 11px;
+    border-radius: 999px;
+    color: var(--js-accent);
+    background: color-mix(in srgb, var(--js-accent) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--js-accent) 35%, transparent);
+    margin: 0 0 8px;
+}
+
+.json-artboard-content .js-h {
+    color: var(--js-heading);
+    font-size: var(--js-h-size, 1.35em);
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 4px;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+.json-artboard-content .js-sub {
+    color: color-mix(in srgb, var(--js-text) 82%, transparent);
+    font-size: .95em;
+    margin: 0 0 10px;
+}
+
+.json-artboard-content .js-p {
+    margin: 6px 0 0;
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+12. ODIA TEXT — COLOR, TYPOGRAPHY & COMPONENT DESIGN
+   ============================================================ */
+
+.json-artboard-content .js-odia-text {
+    display: block;
+    color: var(--js-heading-odia);
+    background: color-mix(in srgb, var(--js-accent) 8%, var(--js-surface));
+    font-family: var(--js-odia-font);
+    font-size: var(--js-odia-text-size);
+    font-weight: var(--js-odia-text-weight);
+    line-height: var(--js-odia-text-line-height);
+    letter-spacing: var(--js-odia-text-letter-spacing);
+    text-align: var(--js-odia-text-align);
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.json-artboard-content .js-odia-h {
+    display: block;
+    color: var(--js-heading-odia);
+    font-family: var(--js-odia-font);
+    font-size: var(--js-odia-heading-size);
+    font-weight: var(--js-odia-heading-weight);
+    line-height: var(--js-odia-heading-line-height);
+    letter-spacing: var(--js-odia-heading-letter-spacing);
+    text-align: var(--js-odia-heading-align);
+    margin: 12px 0 6px;
+    padding: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.json-artboard-content .js-odia-text strong {
+    color: var(--js-heading-odia-bold);
+    font-weight: 600 !important;
+}
+
+.json-artboard-content .js-odia-h strong {
+    color: var(--js-accent);
+    font-weight: 700;
+}
+
+.json-artboard-content .js-odia-note {
+    display: block;
+    color: var(--js-text);
+    margin-top: 8px;
+}
+
+
+/* ============================================================
+13. ODIA TEXT — MOBILE TYPOGRAPHY
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+    .json-artboard-content .js-odia-text {
+        text-align: left;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .json-artboard-content .js-odia-text {
+        font-size: var(--js-odia-text-mobile-size);
+        line-height: 1.85;
+        padding: 7px 9px;
+    }
+
+    .json-artboard-content .js-odia-h {
+        font-size: var(--js-odia-heading-mobile-size);
+        line-height: 1.65;
+    }
+}
+
+
+/* ============================================================
+14. STRUCTURED HEADER
+   ============================================================ */
+
+.json-artboard-content .js-structured-header {
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--js-accent) 20%, var(--js-surface)),
+        var(--js-surface)
+    );
+    border-color: color-mix(in srgb, var(--js-accent) 40%, var(--js-border));
+}
+
+.json-artboard-content .js-structured-header .js-h {
+    font-size: var(--js-h-size, 1.75em);
+    font-weight: 800;
+}
+
+.json-artboard-content .js-structured-header .js-sub {
+    margin-bottom: 0;
+    font-size: 1.02em;
+}
+
+
+/* ============================================================
+15. GENERAL TEXT FORMATTING
+   ============================================================ */
+
+.json-artboard-content strong {
+    color: var(--js-heading-text);
+    font-weight: 700;
+}
+
+.json-artboard-content mark {
+    background: color-mix(in srgb, var(--js-accent) 28%, transparent);
+    color: var(--js-heading);
+    padding: 0 3px;
+    border-radius: 3px;
+}
+
+.json-artboard-content code {
+    background: color-mix(in srgb, var(--js-text) 14%, transparent);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: .9em;
+}
+
+
+/* ============================================================
+16. LIST COMPONENT
+   ============================================================ */
+
+.json-artboard-content .js-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    counter-reset: jsn;
+}
+
+.json-artboard-content .js-list li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 4px 0;
+    counter-increment: jsn;
+    position: relative;
+}
+
+.json-artboard-content .js-list li .js-li-body {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.json-artboard-content .js-list li::before {
+    flex: none;
+    margin-top: .1em;
+}
+
+.json-artboard-content .js-list.bullet li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--js-accent);
+    margin-top: .68em;
+}
+
+.json-artboard-content .js-list.numbered li::before {
+    content: counter(jsn);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--js-accent);
+    color: var(--js-bg);
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: .2em;
+}
+
+.json-artboard-content .js-list.check li::before {
+    content: '\2713';
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--js-accent) 22%, transparent);
+    color: var(--js-accent);
+    border: 1px solid color-mix(in srgb, var(--js-accent) 45%, transparent);
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: .2em;
+}
+
+
+/* ============================================================
+17. TABLE COMPONENT
+   ============================================================ */
+
+.json-artboard-content .js-table-scroll,
+.json-artboard-content .js-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--js-border);
+    border-radius: 10px;
+    margin-top: 8px;
+}
+
+.json-artboard-content .js-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: .95em;
+    margin: 0;
+}
+
+.json-artboard-content .js-table th,
+.json-artboard-content .js-table td {
+    min-width: 140px;
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+    word-break: normal;
+    overflow-wrap: normal;
+    hyphens: none;
+    border: 0;
+    border-top: 1px solid var(--js-border);
+    color: var(--js-text);
+    background: transparent;
+}
+
+.json-artboard-content .js-table thead th {
+    background: color-mix(in srgb, var(--js-accent) 16%, var(--js-surface));
+    color: var(--js-accent);
+    font-weight: 700;
+    border-top: 0;
+    white-space: nowrap;
+}
+
+.json-artboard-content .js-table tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--js-text) 5%, transparent);
+}
+
+
+/* ============================================================
+18. FORMULA COMPONENT
+   ============================================================ */
+
+.json-artboard-content .js-fbox {
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-formula {
+    font-size: 1.2em;
+    font-weight: 700;
+    text-align: center;
+    color: var(--js-heading);
+    background: color-mix(in srgb, var(--js-accent) 14%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--js-accent) 65%, transparent);
+    border-radius: 12px;
+    padding: 14px 16px;
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+19. EXAMPLE COMPONENT
+   ============================================================ */
+
+.json-artboard-content .js-expl {
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+}
+
+.json-artboard-content .js-ex-item {
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-ex-title {
+    font-weight: 700;
+    color: var(--js-accent);
+    margin: 0 0 4px;
+}
+
+.json-artboard-content .js-ex-body {
+    border-left: 4px solid var(--js-accent);
+    background: color-mix(in srgb, var(--js-accent) 12%, transparent);
+    border-radius: 0 10px 10px 0;
+    padding: 12px 16px;
+    margin-top: 6px;
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+20. MEDIA AND IMAGE COMPONENTS
+   ============================================================ */
+
+.json-artboard-content .js-media {
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-img {
+    margin: 10px 0 0;
+    border: 1px solid var(--js-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--js-text) 6%, transparent);
+}
+
+.json-artboard-content .js-img img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.json-artboard-content .js-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-split .js-img {
+    margin: 0;
+}
+
+.json-artboard-content .js-split.js-split-right .js-img {
+    order: 2;
+}
+
+.json-artboard-content .js-split-text {
+    min-width: 0;
+}
+
+.json-artboard-content .js-caption {
+    margin-top: 8px;
+    font-size: .9em;
+    font-style: italic;
+    color: color-mix(in srgb, var(--js-text) 85%, transparent);
+    overflow-wrap: anywhere;
+}
+
+
+/* ============================================================
+21. YOUTUBE COMPONENT
+   ============================================================ */
+
+.json-artboard-content .js-yt {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--js-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+}
+
+.json-artboard-content .js-yt iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.json-artboard-content .js-yt-link {
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-yt-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px solid var(--js-accent);
+    border-radius: 999px;
+    color: var(--js-accent);
+    font-size: .9em;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.json-artboard-content .js-yt-link a:hover {
+    background: color-mix(in srgb, var(--js-accent) 14%, transparent);
+}
+
+.json-artboard-content .js-yt-print {
+    display: none;
+}
+
+
+/* ============================================================
+22. MEDIA EMPTY STATE AND CONTROLS
+   ============================================================ */
+
+.json-artboard-content .js-media-empty {
+    margin-top: 10px;
+    padding: 22px;
+    border: 1px dashed var(--js-border);
+    border-radius: 12px;
+    text-align: center;
+    font-size: .92em;
+    opacity: .8;
+}
+
+.json-artboard-content .js-media-ctl {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-media-ctl .js-url {
+    flex: 1 1 220px;
+    min-width: 0;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--js-border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--js-bg) 70%, var(--js-surface));
+    color: var(--js-text);
+    font: inherit;
+    font-size: .88em;
+}
+
+.json-artboard-content .js-media-ctl .js-url:focus {
+    outline: 2px solid var(--js-accent);
+    outline-offset: 1px;
+}
+
+.json-artboard-content .js-media-ctl button,
+.json-artboard-content .js-media-ctl label.js-chip-btn,
+.json-artboard-content .js-media-ctl .js-num {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 11px;
+    border: 1px dashed color-mix(in srgb, var(--js-accent) 55%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--js-accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.json-artboard-content .js-media-ctl button.on,
+.json-artboard-content .js-media-ctl label.js-chip-btn.on {
+    background: color-mix(in srgb, var(--js-accent) 22%, transparent);
+    border-style: solid;
+}
+
+.json-artboard-content .js-media-ctl .js-num {
+    cursor: default;
+}
+
+.json-artboard-content .js-media-ctl .js-num input {
+    width: 56px;
+    height: 22px;
+    border: 1px solid var(--js-border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--js-text);
+    font: inherit;
+    padding: 0 4px;
+}
+
+.json-artboard-content .js-media-ctl input[type="file"] {
+    display: none;
+}
+
+
+/* ============================================================
+23. NOTE BUTTON
+   ============================================================ */
+
+.json-artboard-content .js-note-btn {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+}
+
+.json-artboard-content .js-sec.js-has-note {
+    padding-bottom: 44px;
+}
+
+
+/* ============================================================
+24. BUILDER-ONLY CONTROLS
+   ============================================================ */
+
+.json-artboard-content .js-opt-empty {
+    display: none;
+}
+
+.json-artboard-content .js-sec:hover .js-opt-empty,
+.json-artboard-content .js-sec:focus-within .js-opt-empty {
+    display: block;
+}
+
+.json-artboard-content .js-sec:hover .js-pill.js-opt-empty,
+.json-artboard-content .js-sec:focus-within .js-pill.js-opt-empty {
+    display: inline-block;
+}
+
+
+/* ============================================================
+25. CONTENT EDITING
+   ============================================================ */
+
+.json-artboard-content [contenteditable] {
+    outline: none;
+    border-radius: 4px;
+    cursor: text;
+    min-height: 1em;
+    transition: background .12s;
+}
+
+.json-artboard-content [contenteditable]:hover {
+    background: color-mix(in srgb, var(--js-accent) 10%, transparent);
+}
+
+.json-artboard-content [contenteditable]:focus {
+    background: color-mix(in srgb, var(--js-accent) 14%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--js-accent) 70%, transparent);
+}
+
+.json-artboard-content [contenteditable]:empty::before {
+    content: attr(data-ph);
+    opacity: .5;
+    pointer-events: none;
+}
+
+.json-artboard-content .js-edit-sec:hover {
+    border-color: color-mix(in srgb, var(--js-accent) 60%, var(--js-border));
+}
+
+
+/* ============================================================
+26. DRAG AND DROP
+   ============================================================ */
+
+.json-artboard-content .js-el {
+    position: relative;
+    border-radius: 8px;
+}
+
+.json-artboard-content .js-el.js-drop-before::before,
+.json-artboard-content .js-el.js-drop-after::after,
+.json-artboard-content .js-sec.js-drop-before::before,
+.json-artboard-content .js-sec.js-drop-after::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--js-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--js-accent) 30%, transparent);
+    z-index: 7;
+    pointer-events: none;
+}
+
+.json-artboard-content .js-drop-before::before {
+    top: -3px;
+}
+
+.json-artboard-content .js-drop-after::after {
+    bottom: -3px;
+}
+
+.json-artboard-content .js-dragging {
+    opacity: .4;
+}
+
+.json-artboard-content .js-drop-line {
+    position: relative;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.json-artboard-content .js-drop-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -9px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--js-accent);
+    box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--js-accent) 35%, transparent),
+        0 0 14px 4px color-mix(in srgb, var(--js-accent) 75%, transparent);
+    animation: jsDropGlow 1s ease-in-out infinite alternate;
+}
+
+@keyframes jsDropGlow {
+    from { opacity: .65; }
+    to { opacity: 1; }
+}
+
+.json-artboard-content tr.js-drop-before td {
+    box-shadow: inset 0 3px 0 var(--js-accent);
+}
+
+.json-artboard-content tr.js-drop-after td {
+    box-shadow: inset 0 -3px 0 var(--js-accent);
+}
+
+
+/* ============================================================
+27. DRAG GRIP
+   ============================================================ */
+
+.json-artboard-content .js-grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 28px;
+    border-radius: 7px;
+    color: #94a3b8;
+    cursor: grab;
+    user-select: none;
+    font-size: 15px;
+    letter-spacing: -2px;
+    line-height: 1;
+    touch-action: none;
+}
+
+.json-artboard-content .js-grip:hover {
+    background: #1e293b;
+    color: #fff;
+}
+
+.json-artboard-content .js-grip:active {
+    cursor: grabbing;
+}
+
+
+/* ============================================================
+28. SECTION AND ELEMENT TOOLBARS
+   ============================================================ */
+
+.json-artboard-content .js-tools,
+.json-artboard-content .js-el-tools {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
+    background: #0b1220;
+    border: 1px solid #334155;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity .12s, transform .12s;
+    color-scheme: dark;
+}
+
+.json-artboard-content .js-tools {
+    top: -12px;
+    right: 12px;
+}
+
+.json-artboard-content .js-el-tools {
+    top: -14px;
+    right: 4px;
+    padding: 2px;
+}
+
+.json-artboard-content .js-sec:hover > .js-tools,
+.json-artboard-content .js-sec:focus-within > .js-tools,
+.json-artboard-content .js-tools.open,
+.json-artboard-content .js-el:hover > .js-el-tools,
+.json-artboard-content .js-el:focus-within > .js-el-tools {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+}
+
+.json-artboard-content .js-el:hover > .js-el-tools {
+    z-index: 6;
+}
+
+.json-artboard-content .js-row-ctl {
+    position: sticky;
+    right: 0;
+    width: 1%;
+    min-width: 0 !important;
+    white-space: nowrap;
+    padding: 4px 6px !important;
+    background: var(--js-surface) !important;
+    border-top: 1px solid var(--js-border);
+}
+
+.json-artboard-content .js-row-ctl .js-el-tools {
+    position: static;
+    opacity: 0;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+}
+
+.json-artboard-content tr:hover .js-row-ctl .js-el-tools,
+.json-artboard-content tr:focus-within .js-row-ctl .js-el-tools {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+/* ============================================================
+29. TOOLBAR BUTTONS
+   ============================================================ */
+
+.json-artboard-content .js-tools button,
+.json-artboard-content .js-el-tools button {
+    min-width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #e2e8f0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 4px;
+    gap: 3px;
+}
+
+.json-artboard-content .js-tools button:hover:not(:disabled),
+.json-artboard-content .js-el-tools button:hover:not(:disabled) {
+    background: #1e293b;
+    color: #fff;
+}
+
+.json-artboard-content .js-tools button:disabled,
+.json-artboard-content .js-el-tools button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+.json-artboard-content .js-tools button.danger:hover:not(:disabled),
+.json-artboard-content .js-el-tools button.danger:hover:not(:disabled) {
+    background: #7f1d1d;
+}
+
+
+/* ============================================================
+30. DROPDOWN MENU
+   ============================================================ */
+
+.json-artboard-content .js-menu-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.json-artboard-content .js-menu {
+    position: absolute;
+    top: 34px;
+    right: 0;
+    min-width: 190px;
+    background: #0b1220;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+    z-index: 8;
+}
+
+.json-artboard-content .js-menu button {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    gap: 8px;
+}
+
+
+/* ============================================================
+31. MINI ACTIONS
+   ============================================================ */
+
+.json-artboard-content .js-mini {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity .12s;
+}
+
+.json-artboard-content .js-sec:hover .js-mini,
+.json-artboard-content .js-sec:focus-within .js-mini {
+    opacity: 1;
+}
+
+.json-artboard-content .js-mini button {
+    border: 1px dashed color-mix(in srgb, var(--js-accent) 55%, transparent);
+    background: transparent;
+    color: var(--js-accent);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+
+.json-artboard-content .js-mini button:hover {
+    background: color-mix(in srgb, var(--js-accent) 14%, transparent);
+}
+
+
+/* ============================================================
+32. EMPTY STATE
+   ============================================================ */
+
+.json-artboard-content .js-empty {
+    border: 1px dashed var(--js-border);
+    border-radius: 12px;
+    padding: 28px;
+    text-align: center;
+}
+
+.json-artboard-content .js-empty button {
+    margin-top: 8px;
+    border: 1px solid var(--js-accent);
+    background: transparent;
+    color: var(--js-accent);
+    border-radius: 999px;
+    padding: 5px 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+
+/* ============================================================
+33. TOUCH DEVICE TOOLBAR SUPPORT
+   ============================================================ */
+
+@media (hover: none) {
+    .json-artboard-content .js-tools {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        top: 6px;
+        right: 6px;
+    }
+
+    .json-artboard-content .js-sec {
+        padding-top: 36px;
+    }
+
+    .json-artboard-content .js-el-tools {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        position: static;
+        margin: 4px 0;
+        width: max-content;
+        max-width: 100%;
+    }
+
+    .json-artboard-content .js-row-ctl .js-el-tools {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .json-artboard-content .js-mini {
+        opacity: 1;
+    }
+}
+
+
+/* ============================================================
+34. RESPONSIVE LAYOUT
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+    .json-artboard-content .js-split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .json-artboard-content .js-split.js-split-right .js-img {
+        order: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .jt-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .jt-name {
+        font-size: .58rem;
+    }
+
+    .json-artboard-content {
+        padding: 12px;
+        border-radius: 10px;
+    }
+
+    .json-artboard-content .js-sec {
+        padding: 14px;
+    }
+
+    .json-artboard-content .js-table th,
+    .json-artboard-content .js-table td {
+        min-width: 120px;
+        padding: 8px 10px;
+    }
+}
+
+
+/* ============================================================
+35. PDF / PRINT & PDF EXPORT OPTIMIZATION
+   ============================================================ */
+
+@media print {
+    .json-artboard-content .js-yt,
+    .json-artboard-content .js-yt-link,
+    .json-artboard-content .js-media-ctl,
+    .json-artboard-content .js-tools,
+    .json-artboard-content .js-el-tools,
+    .json-artboard-content .js-mini,
+    .json-artboard-content .js-note-btn,
+    .json-artboard-content .js-row-ctl {
+        display: none !important;
+    }
+
+    .json-artboard-content .js-yt-print {
+        display: block !important;
+        margin-top: 10px;
+        font-size: .92em;
+        overflow-wrap: anywhere;
+    }
+
+    .json-artboard-content .js-img {
+        break-inside: avoid;
+    }
+
+    .json-artboard-content {
+        max-height: none !important;
+        overflow: visible !important;
+        border-radius: 0;
+    }
+
+    .json-artboard-content .js-table-scroll,
+    .json-artboard-content .js-table-wrap {
+        overflow: visible !important;
+        border-radius: 0;
+    }
+
+    .json-artboard-content .js-table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    .json-artboard-content .js-table th,
+    .json-artboard-content .js-table td {
+        min-width: 0 !important;
+    }
+
+    .json-artboard-content .js-table tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .json-artboard-content .js-sec {
+        break-inside: avoid-page;
+    }
+}
+
+.pdf-export .json-artboard-content {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.pdf-export .json-artboard-content .js-note-btn,
+.pdf-export .json-artboard-content .js-media-ctl,
+.pdf-export .json-artboard-content .js-yt,
+.pdf-export .json-artboard-content .js-yt-link {
+    display: none !important;
+}
+
+.pdf-export .json-artboard-content .js-yt-print {
+    display: block !important;
+    margin-top: 10px;
+    font-size: .92em;
+    overflow-wrap: anywhere;
+}
+
+.pdf-export .json-artboard-content .js-table-scroll,
+.pdf-export .json-artboard-content .js-table-wrap {
+    overflow: visible !important;
+}
+
+.pdf-export .json-artboard-content .js-table {
+    width: 100% !important;
+    table-layout: auto !important;
+}
+
+.pdf-export .json-artboard-content .js-table th,
+.pdf-export .json-artboard-content .js-table td {
+    min-width: 0 !important;
+}
+
+.pdf-export .json-artboard-content .js-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+
+/* ============================================================
+36. FINAL ACCESSIBILITY AND SAFETY
+   ============================================================ */
+
+.json-artboard-content button:focus-visible,
+.json-artboard-content a:focus-visible,
+.jt-picker button:focus-visible,
+.jt-preset:focus-visible {
+    outline: 2px solid var(--js-accent, #38bdf8);
+    outline-offset: 3px;
+}
+
+/* ============================================================
+   END OF JSON CONTENT STUDIO STYLESHEET
+   ============================================================ */
