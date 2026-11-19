@@ -388,3 +388,56 @@
 }
 
 [data-theme="light"] .show-odia-tr .mcq-odia-tr { color: #334155; }
+
+
+/* =========================================================
+   Single-Chapter Focus Mode & Active Editing Indicators
+   ========================================================= */
+.tree-row.chapter.is-active-ch {
+  border-left: 3px solid #22d3ee !important;
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.tree-row.chapter.is-inactive-ch {
+  opacity: 0.72;
+  transition: opacity 0.15s ease;
+}
+
+.tree-row.chapter.is-inactive-ch:hover {
+  opacity: 1;
+}
+
+.tree-active-pill {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.22);
+  color: #67e8f9;
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  flex-shrink: 0;
+}
+
+.ws-editing-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: rgba(14, 165, 233, 0.16);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-editing-badge strong {
+  color: #ffffff;
+  font-weight: 700;
+}

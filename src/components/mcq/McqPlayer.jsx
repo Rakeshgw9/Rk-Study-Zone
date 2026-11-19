@@ -172,14 +172,23 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
               {paper.map((x) => {
                 const a = answers[x.id]
                 const ok = isAnswered(a) && isCorrect(x, a)
-                const hasOdia = /mcq-odia-tr/i.test(`${x.question || ''}${(x.options || []).join('')}`)
+                const hasOdia = Boolean(
+                  String(x.odiaQuestion || '').trim() ||
+                  (Array.isArray(x.odiaOptions) && x.odiaOptions.some((v) => String(v || '').trim())) ||
+                  /mcq-odia-tr/i.test(`${x.question || ''}${(x.options || []).join('')}`)
+                )
                 const hasOptExp = hasOptionExplanations(x)
                 const canExp = s.showSolution
                 const expOn = canExp && (openExp[x.id] ?? showAllExp)
                 return (
                   <li key={x.id} className={`${!isAnswered(a) ? 'skip' : ok ? 'ok' : 'bad'} ${expOn ? 'show-odia-tr' : ''}`}>
                     <div className="q">
-                      <RichHtml as="div" className="mcq-review-qbody" value={expOn ? x.question : stripOdia(x.question)} />
+                      <div className="mcq-review-qbody">
+                        <RichHtml as="div" value={expOn ? x.question : stripOdia(x.question)} />
+                        {expOn && String(x.odiaQuestion || '').trim() !== '' && (
+                          <span className="mcq-odia-tr">{x.odiaQuestion}</span>
+                        )}
+                      </div>
                       <small className="mcq-q-score">
                         {!isAnswered(a) ? 'Not answered' : ok ? `+${questionMarks(x, s)}` : `−${questionNegative(x, s)}`}
                       </small>
@@ -188,6 +197,9 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                     <div className="opts">
                       {x.order.map((oi, k) => {
                         const picked = x.type === 'multiple' ? (a || []).includes(oi) : a === oi
+                        const optExpEn = String(x.optionExplanations?.[oi] || '').trim()
+                        const optExpOd = String(x.odiaOptionExplanations?.[oi] || '').trim()
+                        const optOdia = String(x.odiaOptions?.[oi] || '').trim()
                         return (
                           <div
                             key={oi}
@@ -195,12 +207,16 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                           >
                             <div className="mcq-player-opt-row">
                               <span className="mcq-player-opt-letter">{L[k]}.</span>
-                              <RichHtml as="div" className="mcq-player-opt-body" value={expOn ? x.options[oi] : stripOdia(x.options[oi])} />
+                              <div className="mcq-player-opt-body">
+                                <RichHtml as="div" value={expOn ? x.options[oi] : stripOdia(x.options[oi])} />
+                                {expOn && optOdia !== '' && <span className="mcq-odia-tr">{optOdia}</span>}
+                              </div>
                             </div>
-                            {expOn && String(x.optionExplanations?.[oi] || '').trim() !== '' && (
+                            {expOn && (optExpEn !== '' || optExpOd !== '') && (
                               <small className="d-block mcq-opt-exp">
                                 <strong className="mcq-exp-label">Why {L[k]}?</strong>{' '}
-                                <RichHtml as="div" className="mcq-exp-body" value={x.optionExplanations[oi]} />
+                                {optExpEn !== '' && <RichHtml as="div" className="mcq-exp-body" value={optExpEn} />}
+                                {optExpOd !== '' && <small className="d-block mt-1">{optExpOd}</small>}
                               </small>
                             )}
                           </div>
@@ -208,10 +224,17 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                       })}
                     </div>
 
-                    {s.showSolution && x.explanation && (
+                    {s.showSolution && (String(x.explanation || '').trim() !== '' || String(x.odiaExplanation || '').trim() !== '') && (
                       <div className="exp">
                         <strong className="mcq-exp-label">Solution:</strong>{' '}
-                        <RichHtml as="div" className="mcq-exp-body" value={x.explanation} />
+                        {String(x.explanation || '').trim() !== '' && (
+                          <RichHtml as="div" className="mcq-exp-body" value={x.explanation} />
+                        )}
+                        {String(x.odiaExplanation || '').trim() !== '' && (
+                          <small>
+                            <b>ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ:</b> {x.odiaExplanation}
+                          </small>
+                        )}
                       </div>
                     )}
                     {expOn && !hasOptExp && !hasOdia && (

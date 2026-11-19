@@ -637,7 +637,11 @@ export default function McqExamModal({
                   const ans = answers[q.id]
                   const answered = isAnswered(ans)
                   const right = answered && isCorrect(q, ans)
-                  const hasOdia = /mcq-odia-tr/i.test(`${q.question || ''}${(q.options || []).join('')}`)
+                  const hasOdia = Boolean(
+                    String(q.odiaQuestion || '').trim() ||
+                    (Array.isArray(q.odiaOptions) && q.odiaOptions.some((v) => String(v || '').trim())) ||
+                    /mcq-odia-tr/i.test(`${q.question || ''}${(q.options || []).join('')}`)
+                  )
                   const hasOptExp = hasOptionExplanations(q)
                   const canExp = settings.showSolution
                   const expOn = canExp && (openExp[q.id] ?? showAllExp)
@@ -653,16 +657,23 @@ export default function McqExamModal({
                             {!answered ? 'Unanswered' : right ? `+${questionMarks(q, settings)}` : `-${questionNegative(q, settings)}`}
                           </span>
                         </div>
-                        <RichHtml
-                          as="div"
-                          className="mcq-review-question"
-                          value={expOn ? q.question : stripOdia(q.question)}
-                        />
+                        <div className="mcq-review-question">
+                          <RichHtml
+                            as="div"
+                            value={expOn ? q.question : stripOdia(q.question)}
+                          />
+                          {expOn && String(q.odiaQuestion || '').trim() !== '' && (
+                            <span className="mcq-odia-tr">{q.odiaQuestion}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="review-options">
                         {q.order.map((oi, k) => {
                           const picked = q.type === 'multiple' ? (ans || []).includes(oi) : ans === oi
                           const isSol = q.type === 'multiple' ? q.answers.includes(oi) : q.answer === oi
+                          const optExpEn = String(q.optionExplanations?.[oi] || '').trim()
+                          const optExpOd = String(q.odiaOptionExplanations?.[oi] || '').trim()
+                          const optOdia = String(q.odiaOptions?.[oi] || '').trim()
                           return (
                             <div
                               key={oi}
@@ -670,18 +681,21 @@ export default function McqExamModal({
                             >
                               <div className="mcq-review-opt-row">
                                 <span className="bubble">{L[k]}</span>
-                                <RichHtml
-                                  as="div"
-                                  className="mcq-review-opt-body"
-                                  value={expOn ? q.options[oi] : stripOdia(q.options[oi])}
-                                />
+                                <div className="mcq-review-opt-body">
+                                  <RichHtml
+                                    as="div"
+                                    value={expOn ? q.options[oi] : stripOdia(q.options[oi])}
+                                  />
+                                  {expOn && optOdia !== '' && <span className="mcq-odia-tr">{optOdia}</span>}
+                                </div>
                                 {isSol && <span className="mcq-opt-badge is-correct">✓ Correct</span>}
                                 {picked && !isSol && <span className="mcq-opt-badge is-wrong">✗ Selected</span>}
                               </div>
-                              {expOn && String(q.optionExplanations?.[oi] || '').trim() !== '' && (
+                              {expOn && (optExpEn !== '' || optExpOd !== '') && (
                                 <div className="review-opt-exp">
                                   <strong className="mcq-exp-label">Why {L[k]}?</strong>
-                                  <RichHtml as="div" className="mcq-exp-body" value={q.optionExplanations[oi]} />
+                                  {optExpEn !== '' && <RichHtml as="div" className="mcq-exp-body" value={optExpEn} />}
+                                  {optExpOd !== '' && <small className="d-block mt-1">{optExpOd}</small>}
                                 </div>
                               )}
                             </div>
@@ -689,10 +703,17 @@ export default function McqExamModal({
                         })}
                       </div>
 
-                      {settings.showSolution && q.explanation && (
+                      {settings.showSolution && (String(q.explanation || '').trim() !== '' || String(q.odiaExplanation || '').trim() !== '') && (
                         <div className="review-explanation">
                           <strong className="mcq-exp-label">Solution:</strong>
-                          <RichHtml as="div" className="mcq-exp-body" value={q.explanation} />
+                          {String(q.explanation || '').trim() !== '' && (
+                            <RichHtml as="div" className="mcq-exp-body" value={q.explanation} />
+                          )}
+                          {String(q.odiaExplanation || '').trim() !== '' && (
+                            <small>
+                              <b>ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ:</b> {q.odiaExplanation}
+                            </small>
+                          )}
                         </div>
                       )}
                       {expOn && !hasOptExp && !hasOdia && (

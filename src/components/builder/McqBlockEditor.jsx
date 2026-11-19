@@ -54,16 +54,21 @@ import { EditorFallback } from './HtmlBlockEditor'
 const CodeEditor = lazy(() => import('../ui/CodeEditor'))
 const L = 'ABCDEFGH'
 const MCQ_KEYS = [
+  'id',
   'title',
   'description',
   'questions',
   'question',
+  'odiaQuestion',
   'options',
+  'odiaOptions',
   'answer',
   'answers',
   'type',
   'explanation',
+  'odiaExplanation',
   'optionExplanations',
+  'odiaOptionExplanations',
   'explanations',
   'hint',
   'image',

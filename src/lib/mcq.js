@@ -15,16 +15,29 @@ export const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
 export const QUESTION_TYPES = [{ value: 'single', label: 'Single Choice (MCQ)' }, { value: 'multiple', label: 'Multiple Choice (select all)' }]
 export const DEFAULT_MCQ_RESULT = { passPercent: 40, showScore: true, showCorrectAnswers: true, passMessage: 'Great job! You passed.', failMessage: 'Keep practising — you can do it!' }
 
-export const blankQuestion = (over = {}) => ({ id: uid('q'), type: 'single', question: '', options: ['', '', '', ''], answer: -1, answers: [], explanation: '', optionExplanations: ['', '', '', ''], hint: '', image: '', difficulty: 'Medium', marks: 0, negative: '', subject: '', ...over })
+export const blankQuestion = (over = {}) => ({ id: uid('q'), type: 'single', question: '', odiaQuestion: '', options: ['', '', '', ''], odiaOptions: ['', '', '', ''], answer: -1, answers: [], explanation: '', odiaExplanation: '', optionExplanations: ['', '', '', ''], odiaOptionExplanations: ['', '', '', ''], hint: '', image: '', difficulty: 'Medium', marks: 0, negative: '', subject: '', ...over })
 const q = (question, options, answer, explanation = '') => blankQuestion({ question, options, answer, explanation })
 /** Fill missing fields on old questions so every editor/player can rely on them */
 /** One explanation per option (same order as options); always the same length as options */
 export const fitOptionExplanations = (list, count) => Array.from({ length: count }, (_, i) => (Array.isArray(list) && list[i] != null ? String(list[i]) : ''))
 export const normalizeQuestion = (x = {}) => {
   const options = Array.isArray(x.options) ? x.options : ['', '', '', '']
-  return { ...blankQuestion(), ...x, options, optionExplanations: fitOptionExplanations(x.optionExplanations, options.length), answers: Array.isArray(x.answers) ? x.answers : [], type: x.type === 'multiple' ? 'multiple' : 'single' }
+  return {
+    ...blankQuestion(),
+    ...x,
+    odiaQuestion: String(x.odiaQuestion ?? ''),
+    options,
+    odiaOptions: fitOptionExplanations(x.odiaOptions, options.length),
+    odiaExplanation: String(x.odiaExplanation ?? ''),
+    optionExplanations: fitOptionExplanations(x.optionExplanations, options.length),
+    odiaOptionExplanations: fitOptionExplanations(x.odiaOptionExplanations, options.length),
+    answers: Array.isArray(x.answers) ? x.answers : [],
+    type: x.type === 'multiple' ? 'multiple' : 'single',
+  }
 }
-export const hasOptionExplanations = (x) => Array.isArray(x?.optionExplanations) && x.optionExplanations.some((e) => String(e || '').trim() !== '')
+export const hasOptionExplanations = (x) =>
+  (Array.isArray(x?.optionExplanations) && x.optionExplanations.some((e) => String(e || '').trim() !== '')) ||
+  (Array.isArray(x?.odiaOptionExplanations) && x.odiaOptionExplanations.some((e) => String(e || '').trim() !== ''))
 export const isExamBlock = (b) => b?.type === 'mcq' && !!b.data?.exam?.enabled
 export const isAnswered = (a) => (Array.isArray(a) ? a.length > 0 : a !== undefined && a !== null && a !== -1)
 export const questionMarks = (x, s) => (Number(x.marks) > 0 ? Number(x.marks) : Number(s.marksPerQuestion) || 1)
@@ -39,20 +52,24 @@ export const SAMPLE_QUESTIONS = () => [
 ]
 
 export const MCQ_JSON_HELP = `{
-  "title": "Chapter Practice Test",
-  "description": "Attempt the following MCQs.",
+  "title": "Chapter Practice Test — Complete 60 MCQs",
+  "description": "Comprehensive 60-question practice test.",
   "questions": [
     {
+      "id": 1,
       "question": "Question text?",
-      "options": ["A", "B", "C", "D"],
-      "type": "single",       // or "multiple" (then use "answers": [0, 2])
-      "answer": 2,            // index (0 = first) or "C" / option text
-      "explanation": "optional — overall solution",
-      "optionExplanations": ["why A is right/wrong", "why B …", "why C …", "why D …"],   // optional, one per option
-      "hint": "optional",
-      "image": "https://… (optional)",
-      "difficulty": "Easy | Medium | Hard",
-      "marks": 1, "negative": 0.25, "subject": "Concept of PE"
+      "odiaQuestion": "ଓଡ଼ିଆ ପ୍ରଶ୍ନ?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "odiaOptions": ["ବିକଳ୍ପ A", "ବିକଳ୍ପ B", "ବିକଳ୍ପ C", "ବିକଳ୍ପ D"],
+      "answer": 1,
+      "explanation": "Overall English solution",
+      "odiaExplanation": "ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ",
+      "optionExplanations": ["Incorrect — ...", "Correct — ...", "Incorrect — ...", "Incorrect — ..."],
+      "odiaOptionExplanations": ["ଭୁଲ୍: ...", "ଠିକ୍: ...", "ଭୁଲ୍: ...", "ଭୁଲ୍: ..."],
+      "difficulty": "Easy",
+      "marks": 1,
+      "negative": 0.25,
+      "subject": "Concept of PE"
     }
   ]
 }`
@@ -104,8 +121,31 @@ export function parseMcqJson(text) {
     const rawAns = x.answers ?? (Array.isArray(x.answer) ? x.answer : undefined)
     const multiple = x.type === 'multiple' || Array.isArray(rawAns)
     const answers = multiple ? (Array.isArray(rawAns) ? rawAns : [x.answer ?? x.correct]).map((a) => answerIndex(a, options)).filter((n) => n >= 0) : []
+    const rawOdiaOpts = Array.isArray(x.odiaOptions) ? x.odiaOptions : []
+    const odiaOptions = options.map((_, i) => String(rawOdiaOpts[i] ?? ''))
+    const rawOdiaExp = Array.isArray(x.odiaOptionExplanations) ? x.odiaOptionExplanations : []
+    const odiaOptionExplanations = options.map((_, i) => String(rawOdiaExp[i] ?? ''))
     const marks = Number(x.marks); const neg = x.negative
-    return blankQuestion({ question: String(x.question ?? x.q ?? ''), options, type: multiple ? 'multiple' : 'single', answer: multiple ? (answers[0] ?? -1) : answerIndex(x.answer ?? x.correct ?? x.ans, options), answers, explanation: String(x.explanation ?? x.solution ?? ''), optionExplanations, hint: String(x.hint ?? ''), image: String(x.image ?? ''), difficulty: DIFFICULTIES.includes(x.difficulty) ? x.difficulty : 'Medium', marks: marks > 0 ? marks : 0, negative: neg === undefined || neg === null || neg === '' || Number.isNaN(Number(neg)) ? '' : Number(neg), subject: String(x.subject ?? x.topic ?? '') })
+    return blankQuestion({
+      ...(x.id !== undefined && x.id !== null && String(x.id).trim() !== '' ? { id: String(x.id) } : {}),
+      question: String(x.question ?? x.q ?? ''),
+      odiaQuestion: String(x.odiaQuestion ?? ''),
+      options,
+      odiaOptions,
+      type: multiple ? 'multiple' : 'single',
+      answer: multiple ? (answers[0] ?? -1) : answerIndex(x.answer ?? x.correct ?? x.ans, options),
+      answers,
+      explanation: String(x.explanation ?? x.solution ?? ''),
+      odiaExplanation: String(x.odiaExplanation ?? ''),
+      optionExplanations,
+      odiaOptionExplanations,
+      hint: String(x.hint ?? ''),
+      image: String(x.image ?? ''),
+      difficulty: DIFFICULTIES.includes(x.difficulty) ? x.difficulty : 'Medium',
+      marks: marks > 0 ? marks : 0,
+      negative: neg === undefined || neg === null || neg === '' || Number.isNaN(Number(neg)) ? '' : Number(neg),
+      subject: String(x.subject ?? x.topic ?? ''),
+    })
   })
   const errors = validateQuestions(questions)
   return { ok: errors.length === 0, errors, data: { title: Array.isArray(raw) ? undefined : raw.title, description: Array.isArray(raw) ? undefined : raw.description, questions } }
@@ -114,11 +154,17 @@ export function parseMcqJson(text) {
 export function exportMcqJson(block) {
   return JSON.stringify({
     title: block.data.title, description: block.data.description,
-    questions: block.data.questions.map((raw) => {
-      const x = normalizeQuestion(raw); const o = { question: x.question, options: x.options }
+    questions: block.data.questions.map((raw, idx) => {
+      const x = normalizeQuestion(raw)
+      const o = { id: /^\d+$/.test(String(x.id)) ? Number(x.id) : idx + 1, question: x.question }
+      if (String(x.odiaQuestion || '').trim()) o.odiaQuestion = x.odiaQuestion
+      o.options = x.options
+      if (Array.isArray(x.odiaOptions) && x.odiaOptions.some((v) => String(v || '').trim())) o.odiaOptions = x.odiaOptions
       if (x.type === 'multiple') { o.type = 'multiple'; o.answers = x.answers } else o.answer = x.answer
       o.explanation = x.explanation
-      if (hasOptionExplanations(x)) o.optionExplanations = x.optionExplanations
+      if (String(x.odiaExplanation || '').trim()) o.odiaExplanation = x.odiaExplanation
+      if (Array.isArray(x.optionExplanations) && x.optionExplanations.some((e) => String(e || '').trim())) o.optionExplanations = x.optionExplanations
+      if (Array.isArray(x.odiaOptionExplanations) && x.odiaOptionExplanations.some((e) => String(e || '').trim())) o.odiaOptionExplanations = x.odiaOptionExplanations
       if (x.hint) o.hint = x.hint
       if (x.image) o.image = x.image
       o.difficulty = x.difficulty

@@ -302,10 +302,26 @@ export default function BuilderPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleUndo, handleRedo])
 
-  /* ---------- selection ---------- */
+  /* ---------- selection (with Unsaved Guard when switching chapters/units) ---------- */
   const select = useCallback(
-    (next) => {
-      commitWorking()
+    async (next) => {
+      const switchingChapter =
+        working?.dirty &&
+        ((next.chapterId && next.chapterId !== sel.chapterId) ||
+          (!next.chapterId && sel.chapterId))
+      if (switchingChapter) {
+        const ok = await confirm({
+          title: 'Unsaved changes in current chapter',
+          message:
+            'You have unsaved edits in the current block. Save changes and switch to the new chapter?',
+          confirmText: 'Save & Switch',
+        })
+        if (!ok) return
+        const updated = commitWorking()
+        await doSave(updated)
+      } else {
+        commitWorking()
+      }
       setSel(next)
       if (next.blockId) {
         const b = findBlock(contentRef.current, next.blockId).block
@@ -316,7 +332,7 @@ export default function BuilderPage() {
       }
       setPane('workspace')
     },
-    [commitWorking]
+    [working, sel.chapterId, confirm, commitWorking, doSave]
   )
 
   /* ---------- left-sidebar layer tree: select a JSON section → select its block, open the section theme override, scroll the artboard ---------- */
@@ -1039,6 +1055,11 @@ export default function BuilderPage() {
                   unit={unit}
                   chapter={chapter}
                   block={block}
+                  badge={
+                    <span className="ws-editing-badge" title="Currently active chapter being edited">
+                      Editing: <strong>Unit {unitIndex + 1} · Ch {chIndex + 1}</strong> ({chapter.title})
+                    </span>
+                  }
                   onSelect={(s) => {
                     select(s)
                     requestScroll(s)

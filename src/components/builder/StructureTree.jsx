@@ -48,8 +48,23 @@ export default function StructureTree({ content, sel, onSelect, onSelectSection,
   const [drag, setDrag] = useState(null)
   const [over, setOver] = useState(null)
   const rootRef = useRef(null)
-  const isOpen = (id) => open[id] !== false
-  const toggle = (id) => setOpen((o) => ({ ...o, [id]: !isOpen(id) }))
+  const isUnitOpen = (id) => open[id] ?? (sel.unitId ? sel.unitId === id : true)
+  const isChapterOpen = (id) => open[`ch:${id}`] ?? (sel.chapterId === id)
+  const toggleUnit = (id) => setOpen((o) => ({ ...o, [id]: !isUnitOpen(id) }))
+  const toggleChapter = (id) => setOpen((o) => ({ ...o, [`ch:${id}`]: !isChapterOpen(id) }))
+  // Auto-collapse all other chapters whenever the active chapter changes so only the active chapter stays open
+  useEffect(() => {
+    if (!sel.chapterId) return
+    setOpen((o) => {
+      const next = {}
+      Object.keys(o).forEach((k) => {
+        if (!k.startsWith('ch:')) next[k] = o[k]
+      })
+      if (sel.unitId) next[sel.unitId] = true
+      next[`ch:${sel.chapterId}`] = true
+      return next
+    })
+  }, [sel.chapterId, sel.unitId])
   // JSON block layers: collapsed by default, except for the block being edited
   const secKey = (blockId) => `sec:${blockId}`
   const isSecOpen = (blockId) => open[secKey(blockId)] ?? sel.blockId === blockId
@@ -107,7 +122,7 @@ export default function StructureTree({ content, sel, onSelect, onSelectSection,
                   <span className="t">{u.title}</span>
                   <span className="s">{plural(u.chapters.length, 'chapter')}</span>
                 </span>
-                <button type="button" className="icon-mini" onClick={(e) => { e.stopPropagation(); toggle(u.id) }} aria-label={isOpen(u.id) ? 'Collapse' : 'Expand'}>{isOpen(u.id) ? <LuChevronDown /> : <LuChevronRight />}</button>
+                <button type="button" className="icon-mini" onClick={(e) => { e.stopPropagation(); toggleUnit(u.id) }} aria-label={isUnitOpen(u.id) ? 'Collapse' : 'Expand'}>{isUnitOpen(u.id) ? <LuChevronDown /> : <LuChevronRight />}</button>
                 <Kebab label={`Unit options for ${u.title}`} items={[
                   { label: 'Edit Unit', icon: <LuSquarePen />, onClick: () => act.editUnit(u) },
                   { label: 'Add Chapter', icon: <LuPlus />, onClick: () => act.addChapter(u.id) },
@@ -118,15 +133,16 @@ export default function StructureTree({ content, sel, onSelect, onSelectSection,
                 ]} />
               </div>
 
-              {isOpen(u.id) && (
+              {isUnitOpen(u.id) && (
                 <ul className="tree-chapters">
                   {u.chapters.map((ch, ci) => (
                     <li key={ch.id} className={overCls('chapter', u.id, ci)} {...dragProps('chapter', ci, u.id)}>
-                      <div className={`tree-row chapter ${sel.chapterId === ch.id && !sel.blockId ? 'on' : ''}`} style={{ '--c': ch.color }} onClick={() => onSelect({ unitId: u.id, chapterId: ch.id })} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onSelect({ unitId: u.id, chapterId: ch.id })}>
+                      <div className={`tree-row chapter ${sel.chapterId === ch.id ? 'is-active-ch' : 'is-inactive-ch'} ${sel.chapterId === ch.id && !sel.blockId ? 'on' : ''}`} style={{ '--c': ch.color }} onClick={() => onSelect({ unitId: u.id, chapterId: ch.id })} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onSelect({ unitId: u.id, chapterId: ch.id })}>
                         <LuGripVertical className="grip d-none d-lg-block" aria-hidden="true" />
                         <span className="ch-ico"><LuBookOpen /></span>
                         <span className="t flex-grow-1 min-w-0">{ch.title}</span>
-                        <button type="button" className="icon-mini" onClick={(e) => { e.stopPropagation(); toggle(ch.id) }} aria-label={isOpen(ch.id) ? 'Collapse' : 'Expand'}>{isOpen(ch.id) ? <LuChevronDown /> : <LuChevronRight />}</button>
+                        {sel.chapterId === ch.id && <span className="tree-active-pill">ACTIVE</span>}
+                        <button type="button" className="icon-mini" onClick={(e) => { e.stopPropagation(); toggleChapter(ch.id) }} aria-label={isChapterOpen(ch.id) ? 'Collapse' : 'Expand'}>{isChapterOpen(ch.id) ? <LuChevronDown /> : <LuChevronRight />}</button>
                         <Kebab label={`Chapter options for ${ch.title}`} items={[
                           { label: 'Edit Chapter', icon: <LuSquarePen />, onClick: () => act.editChapter(ch, u) },
                           { label: 'Add Block', icon: <LuPlus />, onClick: () => act.addBlock(u.id, ch.id) },
@@ -136,7 +152,7 @@ export default function StructureTree({ content, sel, onSelect, onSelectSection,
                           { label: 'Delete Chapter', icon: <LuTrash2 />, danger: true, onClick: () => act.remove('chapter', ch.id) },
                         ]} />
                       </div>
-                      {isOpen(ch.id) && (
+                      {isChapterOpen(ch.id) && (
                         <ul className="tree-blocks">
                           {ch.blocks.map((src, bi) => { const b = workingBlock?.id === src.id ? workingBlock : src; const label = blockHeading(b, bi)
                             const secs = b.type === 'json' ? studioSectionList(b.data?.json) : null

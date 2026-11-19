@@ -17,7 +17,20 @@ let pendingAnchor = null // clicked sub-section of a chapter that is still loadi
 export default function CourseTree({ portal, content, done, currentId, onOpen, onToggleBlock, search, open, onClose, headRight }) {
   const curUnit = content.units.find((u) => u.chapters.some((c) => c.id === currentId))?.id
   const [exp, setExp] = useState({})
-  const isOpen = (id) => (exp[id] ?? (id === curUnit || id === currentId))
+  const isUnitOpen = (id) => (exp[`u:${id}`] ?? (id === curUnit))
+  const isChapterOpen = (id) => (exp[`c:${id}`] ?? (id === currentId))
+  useEffect(() => {
+    if (!currentId) return
+    setExp((prev) => {
+      const next = {}
+      Object.keys(prev).forEach((k) => {
+        if (!k.startsWith('c:')) next[k] = prev[k]
+      })
+      if (curUnit) next[`u:${curUnit}`] = true
+      next[`c:${currentId}`] = true
+      return next
+    })
+  }, [currentId, curUnit])
   const ov = overallProgress(content, done)
   const term = (search || '').trim().toLowerCase()
 
@@ -80,10 +93,10 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
             const chs = u.chapters.filter((c) => !term || c.title.toLowerCase().includes(term) || u.title.toLowerCase().includes(term))
             if (term && !chs.length) return null
             const up = unitProgress(u, done)
-            const uo = term ? true : isOpen(u.id)
+            const uo = term ? true : isUnitOpen(u.id)
             return (
               <li key={u.id}>
-                <button className="st-unit" style={{ '--c': u.color }} onClick={() => setExp((e) => ({ ...e, [u.id]: !uo }))} aria-expanded={uo}>
+                <button className="st-unit" style={{ '--c': u.color }} onClick={() => setExp((e) => ({ ...e, [`u:${u.id}`]: !uo }))} aria-expanded={uo}>
                   <span className="ico"><IconOf name={u.icon} /></span>
                   <span className="min-w-0 flex-grow-1 text-start"><small>Unit {ui + 1}</small><b title={u.title}>{u.title}</b></span>
                   <span className={`pct ${up.pct === 100 ? 'full' : ''}`}>{up.pct}%</span>
@@ -94,7 +107,7 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
                     {chs.map((c) => {
                       const cp = chapterProgress(c, done)
                       const cur = c.id === currentId
-                      const co = term ? true : isOpen(c.id)
+                      const co = term ? true : isChapterOpen(c.id)
                       return (
                         <li key={c.id} className={cur ? 'cur' : ''}>
                           <div className="st-ch-row">
@@ -103,7 +116,7 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
                               <span className="t" title={c.title}>{c.title}</span>
                               <span className="pct">{cp.pct}%</span>
                             </button>
-                            {c.blocks.length > 0 && <button className="icon-mini" onClick={() => setExp((e) => ({ ...e, [c.id]: !co }))} aria-label={co ? 'Hide blocks' : 'Show blocks'}>{co ? <LuChevronDown /> : <LuChevronRight />}</button>}
+                            {c.blocks.length > 0 && <button className="icon-mini" onClick={() => setExp((e) => ({ ...e, [`c:${c.id}`]: !co }))} aria-label={co ? 'Hide blocks' : 'Show blocks'}>{co ? <LuChevronDown /> : <LuChevronRight />}</button>}
                           </div>
                           {co && c.blocks.length > 0 && (
                             <ul className="st-blocks">
