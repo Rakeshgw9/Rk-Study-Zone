@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LuArrowLeft, LuArrowRight, LuBookmark, LuCircleCheck, LuCircleX, LuClock, LuEraser, LuFlag, LuLightbulb, LuPause, LuPlay, LuRotateCcw, LuSkipForward, LuTrophy } from 'react-icons/lu'
-import { DEFAULT_MCQ_DISPLAY, DEFAULT_MCQ_RESULT, DEFAULT_MCQ_SETTINGS, buildPaper, isAnswered, isCorrect, questionMarks, questionNegative, scorePaper } from '../../lib/mcq'
+import { DEFAULT_MCQ_DISPLAY, DEFAULT_MCQ_RESULT, DEFAULT_MCQ_SETTINGS, buildPaper, hasOptionExplanations, isAnswered, isCorrect, questionMarks, questionNegative, scorePaper } from '../../lib/mcq'
 import { RichHtml } from '../ui/RichText'
 
 const L = 'ABCDEFGH'
 const fmt = (s) => `${String(Math.floor(s / 3600) ? `${Math.floor(s / 3600)}:` : '')}${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 const EXAM_RULES = ['Read every question carefully before answering.', 'Use “Mark for Review” for questions you want to revisit; marked questions are still evaluated if answered.', 'You can move between questions with the palette, Previous and Next.', 'The exam is submitted automatically when the timer ends.', 'Do not refresh or close the page during the exam.']
 const safeImg = (u = '') => (/^(https?:\/\/|data:image\/)/i.test(u) ? u : '')
+const stripOdia = (html = '') => String(html).replace(/<span[^>]*class=["']?mcq-odia-tr["']?[^>]*>[\s\S]*?<\/span>/gi, '')
 
 /**
  * MCQ test player (practice test and chapter exam).
@@ -27,6 +28,8 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
   const [marked, setMarked] = useState({})
   const [visited, setVisited] = useState({})
   const [hints, setHints] = useState({})
+  const [showAllExp, setShowAllExp] = useState(false)
+  const [openExp, setOpenExp] = useState({})
   const [secs, setSecs] = useState(0)
   const [paused, setPaused] = useState(false)
   const [result, setResult] = useState(null)
@@ -56,7 +59,7 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
   }
   useEffect(() => { if (phase === 'run' && total && secs >= total && s.autoSubmit) finish() }) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const start = () => { setPaperSeed((x) => x + 1); setResult(null); setPhase('run') }
+  const start = () => { setPaperSeed((x) => x + 1); setResult(null); setShowAllExp(false); setOpenExp({}); setPhase('run') }
   const accent = { '--mcq': d.accent || '#2563eb' }
   const selected = (x, oi) => (x.type === 'multiple' ? (answers[x.id] || []).includes(oi) : answers[x.id] === oi)
   const choose = (x, oi) => setAnswers((a) => {
@@ -73,10 +76,10 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
   if (phase === 'intro') {
     const facts = (
       <ul className="mcq-facts">
-        <li><b>{paper.length}</b><span>Questions</span></li>
-        <li><b>{allMarks}</b><span>Marks</span></li>
-        <li><b>{s.timeLimitOn ? `${s.timeLimit} min` : 'No limit'}</b><span>Time</span></li>
-        <li><b>{s.negativeMarking ? `−${s.negativeValue}` : 'None'}</b><span>Negative</span></li>
+        <li><b>{paper.length}</b><span className="mcq-fact-lbl">Questions</span></li>
+        <li><b>{allMarks}</b><span className="mcq-fact-lbl">Marks</span></li>
+        <li><b>{s.timeLimitOn ? `${s.timeLimit} min` : 'No limit'}</b><span className="mcq-fact-lbl">Time</span></li>
+        <li><b>{s.negativeMarking ? `−${s.negativeValue}` : 'None'}</b><span className="mcq-fact-lbl">Negative</span></li>
       </ul>
     )
     const startBtn = (
@@ -124,8 +127,8 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
         {!compact && first && (
           <div className="mcq-side" aria-hidden="true">
             <div className="mcq-top"><span className="qn">Q <b>1</b> of {paper.length}</span>{s.timeLimitOn && <span className="mcq-timer"><LuClock /> {fmt(total)}</span>}</div>
-            <div className="mcq-qtext"><span className="n">1.</span> <RichHtml as="span" value={first.question} /></div>
-            <div className="mcq-opts">{first.order.slice(0, 4).map((oi, k) => <span key={oi} className="mcq-opt"><span className="l">{L[k]}</span><RichHtml as="span" value={first.options[oi]} /></span>)}</div>
+            <div className="mcq-qtext"><span className="n">1.</span> <RichHtml as="div" className="mcq-q-body" value={stripOdia(first.question)} /></div>
+            <div className="mcq-opts">{first.order.slice(0, 4).map((oi, k) => <div key={oi} className="mcq-opt"><span className="l">{L[k]}</span><RichHtml as="div" className="mcq-opt-text" value={stripOdia(first.options[oi])} /></div>)}</div>
           </div>
         )}
       </div>
@@ -138,38 +141,100 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
       <div className={`mcq-box mcq-result ${compact ? 'compact' : ''}`} style={accent}>
         <div className={`mcq-score ${result.passed ? 'pass' : 'fail'}`}>
           <LuTrophy />
-          <div>
+          <div className="mcq-score-meta">
             {r.showScore && <div className="big">{result.score} / {result.total}</div>}
             <div className="pct">{result.percent}% · {result.passed ? 'Passed' : 'Not passed'}</div>
           </div>
         </div>
         <p className="mb-3 fw-semibold">{result.passed ? r.passMessage : r.failMessage}</p>
         <div className="mcq-counts">
-          <span className="ok"><LuCircleCheck /> {result.correct} Correct</span>
-          <span className="bad"><LuCircleX /> {result.wrong} Wrong</span>
-          <span><LuSkipForward /> {result.skipped} Skipped</span>
-          <span><LuClock /> {fmt(result.timeTaken)}</span>
+          <span className="mcq-count-pill ok"><LuCircleCheck /> {result.correct} Correct</span>
+          <span className="mcq-count-pill bad"><LuCircleX /> {result.wrong} Wrong</span>
+          <span className="mcq-count-pill skip"><LuSkipForward /> {result.skipped} Skipped</span>
+          <span className="mcq-count-pill time"><LuClock /> {fmt(result.timeTaken)}</span>
         </div>
         {s.negativeMarking && result.wrong > 0 && <p className="small text-muted mb-2">Negative marking applied to {result.wrong} wrong answer{result.wrong > 1 ? 's' : ''}.</p>}
         {(s.showSolution || r.showCorrectAnswers) && !compact && (
-          <ol className="mcq-review">
-            {paper.map((x) => {
-              const a = answers[x.id]; const ok = isAnswered(a) && isCorrect(x, a)
-              return (
-                <li key={x.id} className={!isAnswered(a) ? 'skip' : ok ? 'ok' : 'bad'}>
-                  <div className="q"><RichHtml as="span" value={x.question} /> <small className="mcq-q-score">{!isAnswered(a) ? 'Not answered' : ok ? `+${questionMarks(x, s)}` : `−${questionNegative(x, s)}`}</small></div>
-                  {safeImg(x.image) && <img className="mcq-img" src={safeImg(x.image)} alt="" />}
-                  <div className="opts">
-                    {x.order.map((oi, k) => {
-                      const picked = x.type === 'multiple' ? (a || []).includes(oi) : a === oi
-                      return <span key={oi} className={`o ${r.showCorrectAnswers && isRight(x, oi) ? 'right' : ''} ${picked && !isRight(x, oi) ? 'wrong' : ''} ${picked ? 'picked' : ''}`}>{L[k]}. <RichHtml as="span" value={x.options[oi]} />{s.showSolution && String(x.optionExplanations?.[oi] || '').trim() !== '' && <small className="d-block mcq-opt-exp"><b>Why {L[k]}?</b> <RichHtml as="span" value={x.optionExplanations[oi]} /></small>}</span>
-                    })}
-                  </div>
-                  {s.showSolution && x.explanation && <div className="exp"><b>Solution:</b> <RichHtml as="span" value={x.explanation} /></div>}
-                </li>
-              )
-            })}
-          </ol>
+          <>
+            {s.showSolution && (
+              <div className="d-flex justify-content-end mb-2">
+                <button
+                  type="button"
+                  className="mcq-opt-toggle-btn"
+                  onClick={() => { setShowAllExp((v) => !v); setOpenExp({}) }}
+                  aria-pressed={showAllExp}
+                >
+                  {showAllExp ? 'Hide all option explanations' : 'Show all option explanations'}
+                </button>
+              </div>
+            )}
+            <ol className="mcq-review">
+              {paper.map((x) => {
+                const a = answers[x.id]
+                const ok = isAnswered(a) && isCorrect(x, a)
+                const hasOdia = /mcq-odia-tr/i.test(`${x.question || ''}${(x.options || []).join('')}`)
+                const hasOptExp = hasOptionExplanations(x)
+                const canExp = s.showSolution
+                const expOn = canExp && (openExp[x.id] ?? showAllExp)
+                return (
+                  <li key={x.id} className={`${!isAnswered(a) ? 'skip' : ok ? 'ok' : 'bad'} ${expOn ? 'show-odia-tr' : ''}`}>
+                    <div className="q">
+                      <RichHtml as="div" className="mcq-review-qbody" value={expOn ? x.question : stripOdia(x.question)} />
+                      <small className="mcq-q-score">
+                        {!isAnswered(a) ? 'Not answered' : ok ? `+${questionMarks(x, s)}` : `−${questionNegative(x, s)}`}
+                      </small>
+                    </div>
+                    {safeImg(x.image) && <img className="mcq-img" src={safeImg(x.image)} alt="" />}
+                    <div className="opts">
+                      {x.order.map((oi, k) => {
+                        const picked = x.type === 'multiple' ? (a || []).includes(oi) : a === oi
+                        return (
+                          <div
+                            key={oi}
+                            className={`o ${r.showCorrectAnswers && isRight(x, oi) ? 'right' : ''} ${picked && !isRight(x, oi) ? 'wrong' : ''} ${picked ? 'picked' : ''}`}
+                          >
+                            <div className="mcq-player-opt-row">
+                              <span className="mcq-player-opt-letter">{L[k]}.</span>
+                              <RichHtml as="div" className="mcq-player-opt-body" value={expOn ? x.options[oi] : stripOdia(x.options[oi])} />
+                            </div>
+                            {expOn && String(x.optionExplanations?.[oi] || '').trim() !== '' && (
+                              <small className="d-block mcq-opt-exp">
+                                <strong className="mcq-exp-label">Why {L[k]}?</strong>{' '}
+                                <RichHtml as="div" className="mcq-exp-body" value={x.optionExplanations[oi]} />
+                              </small>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {s.showSolution && x.explanation && (
+                      <div className="exp">
+                        <strong className="mcq-exp-label">Solution:</strong>{' '}
+                        <RichHtml as="div" className="mcq-exp-body" value={x.explanation} />
+                      </div>
+                    )}
+                    {expOn && !hasOptExp && !hasOdia && (
+                      <div className="review-opt-exp-empty">
+                        Per-option explanations are not added for this question.
+                      </div>
+                    )}
+
+                    {canExp && (
+                      <button
+                        type="button"
+                        className="mcq-opt-toggle-btn mt-2"
+                        onClick={() => setOpenExp((m) => ({ ...m, [x.id]: !expOn }))}
+                        aria-expanded={expOn}
+                      >
+                        {expOn ? 'Hide option explanations' : 'Explain every option'}
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          </>
         )}
         <div className="d-flex gap-2 justify-content-center flex-wrap mt-3">
           {(mode === 'preview' || left - 1 > 0 || limit === 0) && <button className="btn mcq-btn-primary" onClick={() => { setAgree(true); start() }}><LuRotateCcw /> {exam ? 'Retake Exam' : 'Try Again'}</button>}
@@ -189,18 +254,22 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
 
   const renderQuestion = (x, n) => (
     <div className="mcq-q">
-      <div className="mcq-qtext">{d.showQuestionNumbers && <span className="n">{n}.</span>} <RichHtml as="span" value={x.question} />
-        <small className="mcq-q-score" title="Marks for this question">+{questionMarks(x, s)}{s.negativeMarking && questionNegative(x, s) > 0 ? ` / −${questionNegative(x, s)}` : ''}</small></div>
+      <div className="mcq-qtext">
+        {d.showQuestionNumbers && <span className="n">{n}.</span>}
+        <RichHtml as="div" className="mcq-q-body" value={stripOdia(x.question)} />
+        <small className="mcq-q-score" title="Marks for this question">+{questionMarks(x, s)}{s.negativeMarking && questionNegative(x, s) > 0 ? ` / −${questionNegative(x, s)}` : ''}</small>
+      </div>
       {x.type === 'multiple' && <div className="mcq-multi-note">Select all correct answers</div>}
       {safeImg(x.image) && <img className="mcq-img" src={safeImg(x.image)} alt="Question illustration" />}
       <div className="mcq-opts" role={x.type === 'multiple' ? 'group' : 'radiogroup'}>
         {x.order.map((oi, k) => (
           <button key={oi} type="button" role={x.type === 'multiple' ? 'checkbox' : 'radio'} aria-checked={selected(x, oi)} className={`mcq-opt ${selected(x, oi) ? 'on' : ''} ${x.type === 'multiple' ? 'multi' : ''}`} onClick={() => choose(x, oi)} disabled={paused}>
-            <span className="l">{L[k]}</span><RichHtml as="span" value={x.options[oi]} />
+            <span className="l">{L[k]}</span>
+            <RichHtml as="div" className="mcq-opt-text" value={stripOdia(x.options[oi])} />
           </button>
         ))}
       </div>
-      {d.showHints && x.hint && (hints[x.id] ? <div className="mcq-hint"><LuLightbulb /> <RichHtml as="span" value={x.hint} /></div> : <button type="button" className="mcq-hint-btn" onClick={() => setHints((h) => ({ ...h, [x.id]: true }))}><LuLightbulb /> Show hint</button>)}
+      {d.showHints && x.hint && (hints[x.id] ? <div className="mcq-hint"><LuLightbulb /> <RichHtml as="div" className="mcq-hint-body" value={x.hint} /></div> : <button type="button" className="mcq-hint-btn" onClick={() => setHints((h) => ({ ...h, [x.id]: true }))}><LuLightbulb /> Show hint</button>)}
     </div>
   )
 
@@ -209,10 +278,10 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
       <div className="mcq-box mcq-confirm" style={accent}>
         <h3>Submit {exam ? 'exam' : 'test'}?</h3>
         <ul className="mcq-facts">
-          <li><b>{answeredCount}</b><span>Answered</span></li>
-          <li><b>{paper.length - answeredCount}</b><span>Not answered</span></li>
-          <li><b>{markedCount}</b><span>Marked for review</span></li>
-          <li><b>{total ? fmt(remaining) : fmt(secs)}</b><span>{total ? 'Time left' : 'Time taken'}</span></li>
+          <li><b>{answeredCount}</b><span className="mcq-fact-lbl">Answered</span></li>
+          <li><b>{paper.length - answeredCount}</b><span className="mcq-fact-lbl">Not answered</span></li>
+          <li><b>{markedCount}</b><span className="mcq-fact-lbl">Marked for review</span></li>
+          <li><b>{total ? fmt(remaining) : fmt(secs)}</b><span className="mcq-fact-lbl">{total ? 'Time left' : 'Time taken'}</span></li>
         </ul>
         <p className="text-muted">Once submitted you cannot change your answers.</p>
         <div className="d-flex gap-2 justify-content-center flex-wrap"><button className="btn mcq-btn-ghost" onClick={() => setConfirming(false)}>Continue {exam ? 'exam' : 'test'}</button><button className="btn mcq-btn-primary" onClick={finish}><LuFlag /> Submit now</button></div>
@@ -224,12 +293,12 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
     <div className={`mcq-box mcq-run ${compact ? 'compact' : ''} ${exam ? 'mcq-exam-run' : ''}`} style={accent}>
       <div className="mcq-top">
         <span className="qn">{d.oneAtATime ? <>Question <b>{idx + 1}</b> of {paper.length}</> : <>{answeredCount} / {paper.length} answered</>}</span>
-        <span className="d-flex align-items-center gap-2">
+        <div className="mcq-top-right">
           {d.showTimer && <span className={`mcq-timer ${total && remaining < 60 ? 'low' : ''}`} aria-live="off"><LuClock /> {fmt(remaining)}</span>}
           {s.allowPause && !exam && <button className="mcq-icon" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Resume' : 'Pause'}>{paused ? <LuPlay /> : <LuPause />}</button>}
-        </span>
+        </div>
       </div>
-      {d.showProgressBar && <div className="mcq-progress"><span style={{ width: `${((d.oneAtATime ? idx + 1 : answeredCount) / paper.length) * 100}%` }} /></div>}
+      {d.showProgressBar && <div className="mcq-progress"><span className="mcq-progress-fill" style={{ width: `${((d.oneAtATime ? idx + 1 : answeredCount) / paper.length) * 100}%` }} /></div>}
       <div className={exam ? 'mcq-exam-body' : ''}>
         <div className="mcq-exam-main">
           {paused ? <div className="mcq-paused"><LuPause /> Paused — press play to continue.</div> : d.oneAtATime ? renderQuestion(q, idx + 1) : paper.map((x, i) => <div key={x.id}>{renderQuestion(x, i + 1)}</div>)}
@@ -251,7 +320,12 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
         {d.oneAtATime && d.showQuestionNav && !compact && (
           <aside className="mcq-palette" aria-label="Question palette">
             <div className="mcq-nav">{paper.map((x, i) => <button key={x.id} className={navClass(x, i)} onClick={() => setIdx(i)} aria-label={`Question ${i + 1}${marked[x.id] ? ', marked for review' : ''}${isAnswered(answers[x.id]) ? ', answered' : ''}`}>{i + 1}</button>)}</div>
-            <div className="mcq-legend"><span><i className="done" /> Answered</span><span><i className="seen" /> Not answered</span><span><i className="marked" /> Marked</span><span><i /> Not visited</span></div>
+            <div className="mcq-legend">
+              <span className="mcq-legend-item"><i className="done" /> Answered</span>
+              <span className="mcq-legend-item"><i className="seen" /> Not answered</span>
+              <span className="mcq-legend-item"><i className="marked" /> Marked</span>
+              <span className="mcq-legend-item"><i /> Not visited</span>
+            </div>
             {exam && <button className="btn mcq-btn-primary w-100 mt-2" onClick={goSubmit}><LuFlag /> Submit Exam</button>}
           </aside>
         )}

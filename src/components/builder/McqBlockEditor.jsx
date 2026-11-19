@@ -4,6 +4,8 @@ import {
   LuArrowUp,
   LuBookmark,
   LuCheck,
+  LuChevronDown,
+  LuChevronUp,
   LuCircleAlert,
   LuCircleCheck,
   LuCopy,
@@ -96,6 +98,8 @@ export function McqCenter({ block, setData, ui, setUi }) {
   const [ocrText, setOcrText] = useState('')
   const [dragFrom, setDragFrom] = useState(null)
   const [qSearch, setQSearch] = useState('')
+  const [qListOpen, setQListOpen] = useState(false)
+  const [guideCopied, setGuideCopied] = useState(false)
 
   // Live preview controls
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
@@ -399,7 +403,18 @@ export function McqCenter({ block, setData, ui, setUi }) {
           /* Requirement: Three Organised Panels Below Live Preview */
           <div className="mcq-three-panel-layout">
             {/* PANEL 1: Left Searchable Question List */}
-            <aside className="mcq-p1-list" aria-label="Question List">
+            <aside className={`mcq-p1-list ${qListOpen ? 'is-open' : ''}`} aria-label="Question List">
+              <button
+                type="button"
+                className="mcq-p1-mobile-toggle d-md-none"
+                onClick={() => setQListOpen((o) => !o)}
+                aria-expanded={qListOpen}
+              >
+                <span className="mcq-p1-toggle-label">
+                  Questions ({filteredQs.length}) · Q{sel + 1} selected
+                </span>
+                {qListOpen ? <LuChevronUp /> : <LuChevronDown />}
+              </button>
               <div className="mcq-p1-head">
                 <div className="mcq-search-box">
                   <LuSearch />
@@ -461,7 +476,7 @@ export function McqCenter({ block, setData, ui, setUi }) {
                         <button
                           type="button"
                           className="q-main"
-                          onClick={() => setUi({ mcqSel: i, mcqMode: 'manual' })}
+                          onClick={() => { setUi({ mcqSel: i, mcqMode: 'manual' }); setQListOpen(false) }}
                         >
                           <span className="n">{i + 1}</span>
                           <span className="t">
@@ -497,14 +512,14 @@ export function McqCenter({ block, setData, ui, setUi }) {
             <main className="mcq-p2-editor" aria-label="Question Editor">
               {q ? (
                 <div className="mcq-p2-content">
-                  <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-                    <span className="h6 mb-0 text-white fw-bold">
+                  <div className="mcq-p2-head d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                    <span className="mcq-p2-qtitle h6 mb-0 text-white fw-bold">
                       Question {sel + 1} of {qs.length}
                     </span>
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="mcq-p2-type-wrap d-flex align-items-center gap-2">
                       <label className="small text-soft me-1">Type:</label>
                       <select
-                        className="ui-input ui-select ui-input-sm"
+                        className="ui-input ui-select ui-input-sm mcq-p2-type-select"
                         style={{ width: 170 }}
                         value={q.type}
                         onChange={(e) => {
@@ -538,7 +553,7 @@ export function McqCenter({ block, setData, ui, setUi }) {
                   {/* Options List */}
                   <div className="mt-3">
                     <div className="ui-label mb-2 d-flex justify-content-between align-items-center">
-                      <span>
+                      <span className="mcq-opt-heading">
                         Options{' '}
                         <small className="text-soft">
                           (Click the letter to select correct answer)
@@ -856,7 +871,21 @@ export function McqCenter({ block, setData, ui, setUi }) {
             </div>
             <details className="mt-2">
               <summary className="small text-soft">JSON format guide</summary>
-              <pre className="json-help">{MCQ_JSON_HELP}</pre>
+              <div className="json-help-wrap">
+                <button
+                  type="button"
+                  className="btn ui-btn ui-btn-secondary btn-sm json-copy-btn"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(MCQ_JSON_HELP)
+                    setGuideCopied(true)
+                    toast("JSON format guide copied!")
+                    setTimeout(() => setGuideCopied(false), 2200)
+                  }}
+                >
+                  {guideCopied ? <><LuCheck /> Copied!</> : <><LuCopy /> Copy Code</>}
+                </button>
+                <pre className="json-help">{MCQ_JSON_HELP}</pre>
+              </div>
             </details>
           </div>
         ) : mode === 'upload' ? (
@@ -1020,7 +1049,7 @@ export function McqProps({ block, setBlock, setData, ui, setUi, onSave, dirty })
   const tab = ui.mcqProps || 'content'
   const Row = ({ label, k, obj = s, set = setS }) => (
     <div className="prop-row">
-      <span>{label}</span>
+      <span className="mcq-toggle-label">{label}</span>
       <Toggle checked={obj[k]} onChange={(v) => set({ [k]: v })} small />
     </div>
   )
@@ -1062,7 +1091,7 @@ export function McqProps({ block, setBlock, setData, ui, setUi, onSave, dirty })
               />
             </Field>
             <div className="prop-row">
-              <span>Show in Chapter</span>
+              <span className="mcq-setting-label">Show in Chapter</span>
               <Toggle
                 checked={block.visible !== false}
                 onChange={(v) => setBlock({ visible: v })}
@@ -1073,7 +1102,7 @@ export function McqProps({ block, setBlock, setData, ui, setUi, onSave, dirty })
 
           <Section title="Quick Exam Rules">
             <div className="prop-row">
-              <span>Time Limit</span>
+              <span className="mcq-setting-label">Time Limit</span>
               <Toggle
                 checked={!!s.timeLimitOn}
                 onChange={(v) => setS({ timeLimitOn: v })}
@@ -1091,7 +1120,7 @@ export function McqProps({ block, setBlock, setData, ui, setUi, onSave, dirty })
               />
             )}
             <div className="prop-row">
-              <span>Negative Marking</span>
+              <span className="mcq-setting-label">Negative Marking</span>
               <Toggle
                 checked={!!s.negativeMarking}
                 onChange={(v) => setS({ negativeMarking: v })}
@@ -1142,7 +1171,7 @@ export function McqProps({ block, setBlock, setData, ui, setUi, onSave, dirty })
         <>
           <Section title="Chapter Examination Mode">
             <div className="prop-row">
-              <span>Enable Exam Mode</span>
+              <span className="mcq-setting-label">Enable Exam Mode</span>
               <Toggle checked={!!ex.enabled} onChange={(v) => setEx({ enabled: v })} small />
             </div>
             <p className="small text-soft">

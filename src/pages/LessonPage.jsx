@@ -24,6 +24,7 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import LoginModal from '../components/LoginModal'
 import Modal from '../components/Modal'
+import GoToTop from '../components/ui/GoToTop'
 import { useToast } from '../components/Toast'
 import CourseTree from '../components/student/CourseTree'
 import StudentHeader from '../components/student/StudentHeader'
@@ -99,7 +100,17 @@ function BlockView({ block, sd, onDone, onOpenExam, onNote }) {
   const hasBlockNote = !!notes[block.id]
   const sectionKeys = Object.keys(notes).filter((k) => k.startsWith(`${block.id}#`)).map((k) => k.slice(block.id.length + 1))
   const openBlockNote = () => onNote?.({ blockId: block.id, key: block.id, title: blockLabelText(block) })
-  const blockBtn = onNote ? <NoteButton has={hasBlockNote} onClick={openBlockNote} /> : null
+  const blockBtn = onNote ? (
+    <>
+      <NoteButton has={hasBlockNote} onClick={openBlockNote} />
+      {hasBlockNote && (
+        <div className="blk-saved-note" onClick={openBlockNote} role="button" tabIndex={0}>
+          <small className="blk-saved-note-lbl"><LuNotebookPen /> Your Note</small>
+          <p className="blk-saved-note-txt">{notes[block.id].text}</p>
+        </div>
+      )}
+    </>
+  ) : null
   // JSON Studio lessons render natively (no iframe); classic JSON / custom HTML blocks keep their sandbox
   const studioNative = useMemo(() => (block.type === 'json' ? nativeStudio(block.data) : null), [block.type, block.data])
 
@@ -222,6 +233,7 @@ export default function LessonPage() {
   const [sd, setSd] = useState(null)
   const [search, setSearch] = useState('')
   const [treeOpen, setTreeOpen] = useState(false)
+  const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false)
   const [leftSidebarHidden, setLeftSidebarHidden] = useState(() => !!prefs.focusMode)
   const [rightSidebarHidden, setRightSidebarHidden] = useState(() => !!prefs.focusMode)
   const [noteEdit, setNoteEdit] = useState(null) // { key, blockId, title, text }
@@ -510,6 +522,7 @@ export default function LessonPage() {
     if (k === 'mock') return chapterMcqs[0] ? openExam(chapterMcqs[0]) : toast('No mock test available yet', 'error')
     if (k === 'progress') return setTreeOpen(true)
     if (k === 'bookmarks') return setPanel('bookmarks')
+    if (k === 'notes') return setPanel('notes')
   }
 
   const prev = flat[curIndex - 1]
@@ -629,6 +642,14 @@ export default function LessonPage() {
             >
               <LuListTree /> Course content
             </button>
+            <button
+              type="button"
+              className="btn ui-btn ui-btn-secondary btn-sm d-lg-none"
+              onClick={() => setToolsDrawerOpen(true)}
+              aria-label="Open study tools and MCQs"
+            >
+              <LuPanelRight /> Study Tools
+            </button>
             <nav className="st-crumbs" aria-label="Breadcrumb">
               <Link to="/learn">My Courses</Link>
               <LuChevronRight />
@@ -736,7 +757,7 @@ export default function LessonPage() {
                   sd={sd}
                   onDone={prefs.autoComplete ? markDone : noop}
                   onOpenExam={openExam}
-                  onNote={isDraft ? undefined : openNote}
+                  onNote={openNote}
                 />
               ))
             )}
@@ -770,7 +791,25 @@ export default function LessonPage() {
           </div>
         </main>
 
-        <aside className="st-side" aria-label="Study tools">
+        {toolsDrawerOpen && (
+          <div
+            className="st-side-scrim d-lg-none"
+            onClick={() => setToolsDrawerOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+        <aside className={`st-side ${toolsDrawerOpen ? 'is-drawer-open' : ''}`} aria-label="Study tools">
+          <div className="st-side-drawer-head d-lg-none">
+            <span className="fw-semibold">Study Tools &amp; MCQs</span>
+            <button
+              type="button"
+              className="st-side-drawer-close"
+              onClick={() => setToolsDrawerOpen(false)}
+              aria-label="Close study tools"
+            >
+              <LuX />
+            </button>
+          </div>
           {/* Study Tools Card */}
           <div className="st-card">
             <div className="st-card-title">
@@ -798,13 +837,13 @@ export default function LessonPage() {
                 </span>
                 <b>Take Test</b>
               </button>
-              <button onClick={() => setPanel('notes')}>
+              <button onClick={() => { setToolsDrawerOpen(false); setPanel('notes') }}>
                 <span className="ti amber">
                   <LuNotebookPen />
                 </span>
                 <b>My Notes</b>
               </button>
-              <button onClick={() => setPanel('bookmarks')}>
+              <button onClick={() => { setToolsDrawerOpen(false); setPanel('bookmarks') }}>
                 <span className="ti pink">
                   <LuBookmark />
                 </span>
@@ -815,7 +854,7 @@ export default function LessonPage() {
               <button
                 type="button"
                 className="tools-syllabus"
-                onClick={() => setPanel('syllabus')}
+                onClick={() => { setToolsDrawerOpen(false); setPanel('syllabus') }}
               >
                 <span className="ti blue">
                   <LuBookOpenText />
@@ -845,7 +884,7 @@ export default function LessonPage() {
                     <button
                       type="button"
                       className="btn ui-btn ui-btn-primary btn-sm"
-                      onClick={() => openExam(b)}
+                      onClick={() => { setToolsDrawerOpen(false); openExam(b) }}
                     >
                       Take Exam
                     </button>
@@ -926,16 +965,44 @@ export default function LessonPage() {
 
           {(() => {
             const q = noteSearch.trim().toLowerCase()
-            const blockNotes = Object.entries(sd.blockNotes || {}).map(([key, n]) => ({ key, ...n }))
+            const blockNotes = Object.entries(sd.blockNotes || {})
+              .filter(([, n]) => n && String(n.text || '').trim())
+              .map(([key, n]) => {
+                const bId = n.blockId || key.split('#')[0]
+                const secId = key.includes('#') ? key.split('#')[1] : ''
+                const owner = flat.find((f) => f.chapter.id === n.chapterId) || flat.find((f) => f.chapter.blocks.some((b) => b.id === bId))
+                const blk = owner?.chapter.blocks.find((b) => b.id === bId)
+                return {
+                  key,
+                  ...n,
+                  blockId: bId,
+                  secId,
+                  resolvedChapterId: owner?.chapter.id || n.chapterId,
+                  blockTitle: blk ? blockLabelText(blk) : (n.label || 'Lesson block'),
+                }
+              })
             const groups = flat
               .map((x) => {
                 const chapterNote = sd.notes?.[x.chapter.id]
-                const items = blockNotes.filter((n) => n.chapterId === x.chapter.id)
-                  .filter((n) => !q || `${n.label} ${n.text}`.toLowerCase().includes(q))
+                const chItems = blockNotes
+                  .filter((n) => n.resolvedChapterId === x.chapter.id)
+                  .filter((n) => !q || `${n.blockTitle} ${n.label} ${n.text}`.toLowerCase().includes(q))
+                const byBlock = []
+                const map = new Map()
+                chItems.forEach((n) => {
+                  if (!map.has(n.blockId)) {
+                    const g = { blockId: n.blockId, blockTitle: n.blockTitle, blockNote: null, sections: [] }
+                    map.set(n.blockId, g)
+                    byBlock.push(g)
+                  }
+                  const g = map.get(n.blockId)
+                  if (!n.secId) g.blockNote = n
+                  else g.sections.push(n)
+                })
                 const showChapterNote = !!chapterNote && (!q || chapterNote.toLowerCase().includes(q))
-                return { x, chapterNote: showChapterNote ? chapterNote : '', items }
+                return { x, chapterNote: showChapterNote ? chapterNote : '', byBlock, count: chItems.length }
               })
-              .filter((g) => g.chapterNote || g.items.length)
+              .filter((g) => g.chapterNote || g.count > 0)
             const total = blockNotes.length + Object.values(sd.notes || {}).filter(Boolean).length
             return (
               <>
@@ -947,7 +1014,7 @@ export default function LessonPage() {
                   <p className="text-soft mb-0">{total ? 'No notes match your search.' : 'No notes yet. Use the “Add note” button on any block or section while you read.'}</p>
                 ) : (
                   <div className="notes-groups">
-                    {groups.map(({ x, chapterNote, items }) => (
+                    {groups.map(({ x, chapterNote, byBlock }) => (
                       <section key={x.chapter.id} className="notes-group">
                         <h3><small>Unit {x.unitIndex + 1}</small> {x.chapter.title}</h3>
                         {chapterNote && (
@@ -959,14 +1026,29 @@ export default function LessonPage() {
                             </div>
                           </div>
                         )}
-                        {items.map((n) => (
-                          <div key={n.key} className="note-item">
-                            <div className="note-body"><b>{n.label || 'Lesson block'}</b><p>{n.text}</p></div>
-                            <div className="note-actions">
-                              <button type="button" className="icon-mini" title="Go to this part" onClick={() => jumpToNote(n)}><LuArrowRight /></button>
-                              <button type="button" className="icon-mini" title="Edit note" onClick={() => { setPanel(null); if (n.chapterId !== chapter.id) go(n.chapterId); setNoteEdit({ key: n.key, blockId: n.blockId, title: n.label, text: n.text, chapterId: n.chapterId }) }}><LuPencil /></button>
-                              <button type="button" className="icon-mini danger" title="Delete note" onClick={() => deleteBlockNote(n.key)}><LuTrash2 /></button>
-                            </div>
+                        {byBlock.map((bg) => (
+                          <div key={bg.blockId} className="notes-block-group">
+                            <div className="notes-block-title">{bg.blockTitle}</div>
+                            {bg.blockNote && (
+                              <div className="note-item">
+                                <div className="note-body"><b>Block note</b><p>{bg.blockNote.text}</p></div>
+                                <div className="note-actions">
+                                  <button type="button" className="icon-mini" title="Go to this block" onClick={() => jumpToNote(bg.blockNote)}><LuArrowRight /></button>
+                                  <button type="button" className="icon-mini" title="Edit note" onClick={() => { setPanel(null); if (bg.blockNote.resolvedChapterId !== chapter.id) go(bg.blockNote.resolvedChapterId); setNoteEdit({ key: bg.blockNote.key, blockId: bg.blockNote.blockId, title: bg.blockNote.label, text: bg.blockNote.text, chapterId: bg.blockNote.resolvedChapterId }) }}><LuPencil /></button>
+                                  <button type="button" className="icon-mini danger" title="Delete note" onClick={() => deleteBlockNote(bg.blockNote.key)}><LuTrash2 /></button>
+                                </div>
+                              </div>
+                            )}
+                            {bg.sections.map((n) => (
+                              <div key={n.key} className="note-item section-note">
+                                <div className="note-body"><b>{n.label || 'Section'}</b><p>{n.text}</p></div>
+                                <div className="note-actions">
+                                  <button type="button" className="icon-mini" title="Go to this section" onClick={() => jumpToNote(n)}><LuArrowRight /></button>
+                                  <button type="button" className="icon-mini" title="Edit note" onClick={() => { setPanel(null); if (n.resolvedChapterId !== chapter.id) go(n.resolvedChapterId); setNoteEdit({ key: n.key, blockId: n.blockId, title: n.label, text: n.text, chapterId: n.resolvedChapterId }) }}><LuPencil /></button>
+                                  <button type="button" className="icon-mini danger" title="Delete note" onClick={() => deleteBlockNote(n.key)}><LuTrash2 /></button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </section>

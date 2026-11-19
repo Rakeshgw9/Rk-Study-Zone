@@ -1014,8 +1014,10 @@
 }
 
 .json-artboard-content .js-p {
-    margin: 6px 0 0;
-    overflow-wrap: anywhere;
+    margin-top: 32px;
+    margin-bottom:4px;
+        overflow-wrap: anywhere;
+    text-decoration: underline;
 }
 
 
@@ -1033,7 +1035,7 @@
     line-height: var(--js-odia-text-line-height);
     letter-spacing: var(--js-odia-text-letter-spacing);
     text-align: var(--js-odia-text-align);
-    margin-top: 10px;
+    margin-top: 0px;
     padding: 8px 10px;
     border-radius: 8px;
     overflow-wrap: anywhere;
@@ -1127,7 +1129,7 @@
    ============================================================ */
 
 .json-artboard-content strong {
-    color: var(--js-heading-text);
+    color: var(--js-text);
     font-weight: 700;
 }
 
@@ -1258,7 +1260,7 @@
 
 .json-artboard-content .js-table thead th {
     background: color-mix(in srgb, var(--js-accent) 16%, var(--js-surface));
-    color: var(--js-accent);
+    color: var(--js-heading-odia-bold);
     font-weight: 700;
     border-top: 0;
     white-space: nowrap;
@@ -1300,7 +1302,10 @@
 }
 
 .json-artboard-content .js-ex-item {
-    margin-top: 10px;
+    margin-top: 26px;
+}
+.js-sec.js-structured-header.js-has-note{
+    display: none;
 }
 
 .json-artboard-content .js-ex-title {
@@ -1310,12 +1315,12 @@
 }
 
 .json-artboard-content .js-ex-body {
-    border-left: 4px solid var(--js-accent);
     background: color-mix(in srgb, var(--js-accent) 12%, transparent);
     border-radius: 0 10px 10px 0;
     padding: 12px 16px;
     margin-top: 6px;
     overflow-wrap: anywhere;
+    text-decoration: underline;
 }
 
 
@@ -1948,6 +1953,10 @@
         padding: 14px;
     }
 
+    .json-artboard-content .js-table thead th {
+        white-space: normal;
+    }
+
     .json-artboard-content .js-table th,
     .json-artboard-content .js-table td {
         min-width: 120px;
@@ -2070,3 +2079,51 @@
 /* ============================================================
    END OF JSON CONTENT STUDIO STYLESHEET
    ============================================================ */
+
+/* Mobile table & touch toolbar fix: prevent sticky .js-row-ctl from covering table cells and keep .js-tools clear of headings */
+@media (max-width: 767.98px) {
+    .json-artboard-content .js-row-ctl {
+        position: static !important;
+        right: auto !important;
+    }
+    .json-artboard-content .js-table {
+        width: max-content;
+        min-width: 100%;
+    }
+    .json-artboard-content .js-table th:not(.js-row-ctl),
+    .json-artboard-content .js-table td:not(.js-row-ctl) {
+        min-width: 150px;
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: normal;
+    }
+}
+@media (hover: none) {
+    .json-artboard-content .js-list li.js-el {
+        flex-wrap: wrap;
+    }
+    .json-artboard-content .js-list li.js-el .js-li-body {
+        flex: 1 1 calc(100% - 36px);
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+    .json-artboard-content .js-list li.js-el > .js-el-tools {
+        margin: 4px 0 6px 34px;
+    }
+}
+@media (hover: none) and (max-width: 575.98px) {
+    .json-artboard-content .js-sec {
+        padding-top: 40px !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .json-artboard-content {
+        padding: 8px 6px !important;
+    }
+    .json-artboard-content .js-sec {
+        padding: 12px 10px !important;
+    }
+}
+
+/* @studio-css:start — generated from studioCss() in src/lib/jsonStudio.js. Do not edit by hand: run `npm run sync:css`. *//* @studio-css:end */

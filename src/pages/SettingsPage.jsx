@@ -157,8 +157,8 @@ export default function SettingsPage() {
         </div>
       </div>
       <div className="row g-3">
-        <div className="col-lg-6">
-          <div className="glass-panel p-4 h-100">
+        <div className="col-lg-6 d-flex flex-column gap-3">
+          <div className="glass-panel p-4">
             <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuUser /> Profile Details</h2>
             
             <div className="d-flex align-items-center gap-3 mb-4">
@@ -260,14 +260,14 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="glass-panel p-4 mt-3">
+          <div className="glass-panel p-4">
             <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuLock /> Security</h2>
             <p className="small text-muted-soft">Forgot or want to change your password? We will email a secure reset link to <b>{user.email}</b>.</p>
             <button type="button" className="btn ui-btn ui-btn-secondary btn-sm" onClick={sendReset}>Send password reset email</button>
           </div>
         </div>
 
-        <div className="col-lg-6">
+        <div className="col-lg-6 d-flex flex-column gap-3">
           <div className="glass-panel p-4">
             <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuSettings2 /> Appearance &amp; Accessibility</h2>
             <div className="st-row">
@@ -281,7 +281,7 @@ export default function SettingsPage() {
             <Switch label="Reduce animations" hint="Turns off popups / hover motion. Helps older devices run smoothly." checked={prefs.reduceMotion} onChange={(v) => setPref('reduceMotion', v)} />
           </div>
 
-          <div className="glass-panel p-4 mt-3">
+          <div className="glass-panel p-4">
             <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuBookOpen /> Learning</h2>
             <Switch label="Auto-complete blocks while reading" hint="A lesson block is marked done after you scroll to its end." checked={prefs.autoComplete} onChange={(v) => setPref('autoComplete', v)} />
             <Switch label="Highlight & pen toolbar" hint="Show the floating teaching toolbar on lesson pages." checked={prefs.teachingToolbar} onChange={(v) => setPref('teachingToolbar', v)} />
@@ -289,7 +289,7 @@ export default function SettingsPage() {
           </div>
 
           {staff && (
-            <div className="glass-panel p-4 mt-3">
+            <div className="glass-panel p-4">
               <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuLayers /> Builder</h2>
               <div className="st-row">
                 <div><b>Autosave delay</b><small>Longer delays save fewer times (faster on slow internet).</small></div>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="glass-panel p-4 mt-3">
+          <div className="glass-panel p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h2 className="h6 fw-semibold mb-0 d-flex align-items-center gap-2"><LuCloudUpload /> Media Storage</h2>
               <button type="button" className="btn ui-btn ui-btn-ghost btn-sm" onClick={runMediaCheck} disabled={media === 'checking'}><LuRotateCcw /> Check</button>
@@ -324,7 +324,7 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <div className="glass-panel p-4 mt-3">
+          <div className="glass-panel p-4">
             <h2 className="h6 fw-semibold mb-3 d-flex align-items-center gap-2"><LuDatabase /> Data &amp; Firebase</h2>
             <dl className="kv">
               <dt>Mode</dt>

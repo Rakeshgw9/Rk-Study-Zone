@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { LuBell, LuBookmark, LuBookOpen, LuChartColumn, LuChevronDown, LuClipboardList, LuEllipsisVertical, LuHouse, LuLayoutDashboard, LuLogOut, LuMoon, LuSearch, LuSun, LuTarget, LuUser } from 'react-icons/lu'
+import { LuBell, LuBookmark, LuBookOpen, LuChartColumn, LuChevronDown, LuClipboardList, LuEllipsisVertical, LuHouse, LuLayoutDashboard, LuLogOut, LuMoon, LuNotebookPen, LuSearch, LuSun, LuTarget, LuUser } from 'react-icons/lu'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
 import { isStaffRole, logout, roleLabel } from '../../services/authService'
@@ -48,6 +48,7 @@ export default function StudentHeader({ title = 'RK Study Zone', subtitle = 'Lea
                 {onSearch && <div className="st-more-search d-md-none"><LuSearch /><input placeholder="Search chapters…" value={search} onChange={(e) => onSearch(e.target.value)} aria-label="Search chapters" /></div>}
                 <button role="menuitem" onClick={() => { setMoreOpen(false); toggle() }}>{theme === 'dark' ? <LuSun /> : <LuMoon />} {theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
                 <button role="menuitem" onClick={() => setMoreOpen(false)}><LuBell /> Notifications</button>
+                <button role="menuitem" onClick={() => { setMoreOpen(false); onNav('bookmarks') }}><LuBookmark /> Bookmarks</button>
                 <button role="menuitem" onClick={() => { setMoreOpen(false); onNav('home') }}><LuHouse /> Dashboard</button>
               </div>
             )}
@@ -72,7 +73,13 @@ export default function StudentHeader({ title = 'RK Study Zone', subtitle = 'Lea
         </div>
       </header>
       <nav className="st-bottom d-xl-none" aria-label="Student navigation">
-        {STUDENT_NAV.filter((n) => n.key !== 'home').map(({ key, label, icon: I }) => <button key={key} className={active === key ? 'on' : ''} onClick={() => onNav(key)}><I /><span>{label.replace('My ', '')}</span></button>)}
+        {STUDENT_NAV.filter((n) => n.key !== 'home').map((item) => {
+          const isBm = item.key === 'bookmarks'
+          const key = isBm ? 'notes' : item.key
+          const label = isBm ? 'My Notes' : item.label.replace('My ', '')
+          const I = isBm ? LuNotebookPen : item.icon
+          return <button key={key} className={active === key ? 'on' : ''} onClick={() => onNav(key)}><I /><span>{label}</span></button>
+        })}
       </nav>
     </>
   )

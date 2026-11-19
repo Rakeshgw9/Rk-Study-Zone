@@ -44,7 +44,7 @@ export default function StudentHome() {
   if (loading) return <div className="page-loader"><span className="spinner-border text-info" /></div>
   if (!user) return <Navigate to="/" replace />
 
-  const onNav = (k) => setParams(k === 'progress' || k === 'bookmarks' ? { tab: k } : k === 'practice' || k === 'mock' ? { tab: 'progress' } : {})
+  const onNav = (k) => setParams(k === 'progress' || k === 'bookmarks' ? { tab: k } : k === 'notes' ? { tab: 'bookmarks' } : k === 'practice' || k === 'mock' ? { tab: 'progress' } : {})
   const open = (x, chId) => navigate(`/learn/${x.portal.id}${chId ? `/${chId}` : x.sd.lastChapterId ? `/${x.sd.lastChapterId}` : ''}`)
   const active = tab === 'progress' ? 'progress' : tab === 'bookmarks' ? 'bookmarks' : 'courses'
 

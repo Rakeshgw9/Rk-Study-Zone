@@ -291,7 +291,7 @@ export function JsonCenter({ block, setData, ui, setUi }) {
           <span className="ttl">
             <LuEye /> Live Preview <span className="pill pill-info ms-1">Full width</span>
           </span>
-          <span className="d-flex align-items-center gap-2 flex-wrap">
+          <span className="ed-card-actions d-flex align-items-center gap-2 flex-wrap">
             {isStudio ? (
               <span className="pill pill-info" title="Every text on the artboard is editable and synced to the JSON code">
                 <LuPencil /> Click any text to edit
@@ -307,7 +307,7 @@ export function JsonCenter({ block, setData, ui, setUi }) {
                 <LuPencil /> {textEdit ? 'Done editing text' : 'Edit text on canvas'}
               </button>
             )}
-            <DeviceToggle value={ui.device || 'desktop'} onChange={(v) => setUi({ device: v })} />
+            <span className="d-none d-sm-inline-flex"><DeviceToggle value={ui.device || 'desktop'} onChange={(v) => setUi({ device: v })} /></span>
             <button
               className="icon-mini"
               onClick={() => setBig((b) => !b)}
@@ -461,7 +461,7 @@ export function JsonCenter({ block, setData, ui, setUi }) {
             5. From URL
             6. Save JSON (Right Aligned) */}
         <div className="json-bottom-action-bar d-flex align-items-center justify-content-between p-2 px-3 border-top flex-wrap gap-2">
-          <div className="d-flex align-items-center gap-2 flex-wrap">
+          <div className="json-bottom-left d-flex align-items-center gap-2 flex-wrap">
             {/* 1. Validation Status */}
             <button
               type="button"
@@ -522,7 +522,7 @@ export function JsonCenter({ block, setData, ui, setUi }) {
           </div>
 
           {/* 6. Save JSON (Right Aligned) */}
-          <div className="ms-auto">
+          <div className="json-bottom-save ms-auto">
             <button
               type="button"
               className="btn ui-btn ui-btn-primary btn-sm px-3 fw-bold"

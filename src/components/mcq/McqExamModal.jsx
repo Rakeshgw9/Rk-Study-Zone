@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  LuTriangleAlert,
   LuArrowLeft,
   LuArrowRight,
   LuBookmark,
@@ -14,7 +13,9 @@ import {
   LuEraser,
   LuFlag,
   LuInfo,
+  LuLayoutGrid,
   LuRotateCcw,
+  LuTriangleAlert,
   LuTrophy,
   LuX,
 } from 'react-icons/lu'
@@ -35,11 +36,11 @@ const fmt = (s) =>
   `${String(Math.floor(s / 3600) ? `${Math.floor(s / 3600)}:` : '')}${String(
     Math.floor((s % 3600) / 60)
   ).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+const stripOdia = (html = '') =>
+  String(html).replace(/<span[^>]*class=["']?mcq-odia-tr["']?[^>]*>[\s\S]*?<\/span>/gi, '')
 
 /**
- * 90%-width Professional MCQ Examination Modal (Changes 4 & 5)
- * Centered popup with blurred backdrop, 3-panel layout, auto-save answers,
- * accurate timer, negative marking, attempt limits, confirmation warning on close, and full result screen.
+ * Full-Featured MCQ Examination Modal (Desktop 3-panel + Mobile Native Full-Screen App View)
  */
 export default function McqExamModal({
   show,
@@ -54,7 +55,6 @@ export default function McqExamModal({
 
   const data = block.data || {}
   const settings = { ...DEFAULT_MCQ_SETTINGS, ...data.settings }
-  const questions = data.questions || []
   const paper = useMemo(() => buildPaper(data), [data])
 
   const [idx, setIdx] = useState(0)
@@ -64,16 +64,17 @@ export default function McqExamModal({
   const [phase, setPhase] = useState('run') // run | result
   const [result, setResult] = useState(null)
   const [confirmExit, setConfirmExit] = useState(false)
-  const [showAllExp, setShowAllExp] = useState(false) // result: open option-wise explanations of every question
-  const [openExp, setOpenExp] = useState({}) // result: per-question toggle
+  const [showAllExp, setShowAllExp] = useState(false)
+  const [openExp, setOpenExp] = useState({})
   const [confirmSubmit, setConfirmSubmit] = useState(false)
+  const [navDrawerOpen, setNavDrawerOpen] = useState(false)
+  const [infoDrawerOpen, setInfoDrawerOpen] = useState(false)
   const submitted = useRef(false)
 
   const timeLimitMin = Number(settings.timeLimit) || 15
   const totalSecs = settings.timeLimitOn ? Math.max(1, timeLimitMin) * 60 : 0
   const remainingSecs = totalSecs ? Math.max(0, totalSecs - secs) : secs
 
-  // Timer interval
   useEffect(() => {
     if (phase !== 'run') return
     const timer = setInterval(() => {
@@ -87,17 +88,13 @@ export default function McqExamModal({
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [phase, totalSecs, settings.autoSubmit])
+  }, [phase, totalSecs, settings.autoSubmit]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Negative marking value
   const negVal = settings.negativeMarking
     ? Number(settings.negativeValue || 0.25)
     : 0
 
-  // Total possible marks
   const totalMarks = paper.reduce((sum, q) => sum + questionMarks(q, settings), 0)
-
-  // Attempts limit
   const attemptLimit = Number(settings.attemptLimit) || 3
   const currentAttempt = Math.min(attemptLimit, attemptsUsed + 1)
 
@@ -114,6 +111,14 @@ export default function McqExamModal({
     } else {
       setAnswers((prev) => ({ ...prev, [q.id]: oi }))
     }
+  }
+
+  const clearCurrentAnswer = (qId) => {
+    setAnswers((prev) => {
+      const n = { ...prev }
+      delete n[qId]
+      return n
+    })
   }
 
   const isSelected = (q, oi) => {
@@ -144,6 +149,8 @@ export default function McqExamModal({
     setResult(res)
     setPhase('result')
     setConfirmSubmit(false)
+    setNavDrawerOpen(false)
+    setInfoDrawerOpen(false)
     onSubmit?.(res)
   }
 
@@ -163,6 +170,8 @@ export default function McqExamModal({
     setResult(null)
     setShowAllExp(false)
     setOpenExp({})
+    setNavDrawerOpen(false)
+    setInfoDrawerOpen(false)
     submitted.current = false
     setPhase('run')
   }
@@ -172,12 +181,59 @@ export default function McqExamModal({
   const markedCount = paper.filter((q) => marked[q.id]).length
 
   const curQ = paper[idx] || paper[0]
+  const curAnswered = curQ ? isAnswered(answers[curQ.id]) : false
+  const curMarked = curQ ? !!marked[curQ.id] : false
+  const isLast = idx >= paper.length - 1
+
+  const renderExamInfoCards = () => (
+    <>
+      <div className="mcq-info-card">
+        <h4 className="info-card-title">
+          <LuInfo /> Exam Information
+        </h4>
+        <div className="info-kv-row">
+          <span className="mcq-info-label">Total Questions</span>
+          <strong className="mcq-info-val">{paper.length}</strong>
+        </div>
+        <div className="info-kv-row">
+          <span className="mcq-info-label">Total Marks</span>
+          <strong className="mcq-info-val">{totalMarks}</strong>
+        </div>
+        <div className="info-kv-row">
+          <span className="mcq-info-label">Negative Marking</span>
+          <strong className="mcq-info-val">{negVal ? `-${negVal}` : 'None'}</strong>
+        </div>
+        <div className="info-kv-row">
+          <span className="mcq-info-label">Time Limit</span>
+          <strong className="mcq-info-val">{timeLimitMin} Minutes</strong>
+        </div>
+        <div className="info-kv-row">
+          <span className="mcq-info-label">Attempts Allowed</span>
+          <strong className="mcq-info-val">{attemptLimit || 'Unlimited'}</strong>
+        </div>
+      </div>
+
+      <div className="mcq-info-card instructions-card">
+        <h4 className="info-card-title">
+          <LuBookmark /> Instructions
+        </h4>
+        <ul className="info-bullet-list">
+          <li>Choose the best answer for each question.</li>
+          <li>Each correct answer carries 1 mark.</li>
+          {negVal > 0 && (
+            <li>For each wrong answer, {negVal} mark will be deducted.</li>
+          )}
+          <li>You can mark a question for review anytime.</li>
+          <li>Click &quot;Submit Exam&quot; to finish and see results.</li>
+        </ul>
+      </div>
+    </>
+  )
 
   return (
     <div
       className="mcq-exam-overlay"
       onClick={(e) => {
-        // Prevent closing when clicking outside the popup modal!
         e.stopPropagation()
       }}
       role="dialog"
@@ -190,7 +246,7 @@ export default function McqExamModal({
             <div className="mcq-exam-badge-icon">
               <LuFlag />
             </div>
-            <div>
+            <div className="mcq-exam-title-wrap">
               <h2 className="mcq-exam-title">
                 {data.title || `MCQ: ${chapter?.title || 'Examination'}`}
               </h2>
@@ -203,36 +259,63 @@ export default function McqExamModal({
 
           <div className="mcq-exam-header-right">
             {phase === 'run' && (
-              <div
-                className={`mcq-exam-timer-pill ${
-                  totalSecs && remainingSecs < 120 ? 'is-urgent' : ''
-                }`}
-              >
-                <LuClock />
-                <span>Time Left: {fmt(remainingSecs)}</span>
-              </div>
+              <>
+                <div
+                  className={`mcq-exam-timer-pill ${
+                    totalSecs && remainingSecs < 120 ? 'is-urgent' : ''
+                  }`}
+                >
+                  <LuClock />
+                  <span className="mcq-timer-label">
+                    <span className="mcq-timer-prefix">Time Left: </span>
+                    {fmt(remainingSecs)}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="mcq-mobile-nav-trigger d-md-none"
+                  onClick={() => setNavDrawerOpen(true)}
+                  aria-label="Open question palette"
+                >
+                  <LuLayoutGrid />
+                  <span className="mcq-mobile-q-counter">
+                    {idx + 1}/{paper.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="mcq-mobile-info-trigger d-md-none"
+                  onClick={() => setInfoDrawerOpen(true)}
+                  aria-label="Exam information and instructions"
+                  title="Exam Info"
+                >
+                  <LuInfo />
+                </button>
+              </>
             )}
 
-            <div className="mcq-exam-stat-item">
+            <div className="mcq-exam-stat-item d-none d-md-flex">
               <span className="lbl">Attempts:</span>
-              <b>
+              <strong className="mcq-stat-val">
                 {currentAttempt}/{attemptLimit || '∞'}
-              </b>
+              </strong>
             </div>
 
-            <div className="mcq-exam-stat-item">
+            <div className="mcq-exam-stat-item d-none d-md-flex">
               <span className="lbl">Total:</span>
-              <b>{paper.length}</b>
+              <strong className="mcq-stat-val">{paper.length}</strong>
             </div>
 
-            <div className="mcq-exam-stat-item">
+            <div className="mcq-exam-stat-item d-none d-md-flex">
               <span className="lbl">Marks:</span>
-              <b>{totalMarks}</b>
+              <strong className="mcq-stat-val">{totalMarks}</strong>
             </div>
 
-            <div className="mcq-exam-stat-item">
+            <div className="mcq-exam-stat-item d-none d-md-flex">
               <span className="lbl">Negative:</span>
-              <b>{negVal ? `-${negVal}` : 'None'}</b>
+              <strong className="mcq-stat-val">{negVal ? `-${negVal}` : 'None'}</strong>
             </div>
 
             <button
@@ -250,11 +333,31 @@ export default function McqExamModal({
         {/* Modal Body */}
         {phase === 'run' ? (
           <div className="mcq-exam-body-grid">
-            {/* Left Panel: Question Navigator */}
-            <aside className="mcq-panel-navigator" aria-label="Question Navigator">
-              <h3 className="mcq-panel-title">
-                <LuBookmark /> Question Navigator
-              </h3>
+            {/* Left Panel: Question Navigator (desktop inline, mobile slide-over/bottom sheet) */}
+            {navDrawerOpen && (
+              <div
+                className="mcq-drawer-backdrop d-md-none"
+                onClick={() => setNavDrawerOpen(false)}
+                aria-hidden="true"
+              />
+            )}
+            <aside
+              className={`mcq-panel-navigator ${navDrawerOpen ? 'is-drawer-open' : ''}`}
+              aria-label="Question Navigator"
+            >
+              <div className="mcq-panel-nav-head">
+                <h3 className="mcq-panel-title mb-0">
+                  <LuBookmark /> Question Navigator
+                </h3>
+                <button
+                  type="button"
+                  className="mcq-drawer-close d-md-none"
+                  onClick={() => setNavDrawerOpen(false)}
+                  aria-label="Close navigator"
+                >
+                  <LuX />
+                </button>
+              </div>
 
               <div className="mcq-nav-grid">
                 {paper.map((q, i) => {
@@ -270,7 +373,10 @@ export default function McqExamModal({
                       key={q.id}
                       type="button"
                       className={`mcq-nav-btn ${statusClass} ${isCur ? 'active' : ''}`}
-                      onClick={() => setIdx(i)}
+                      onClick={() => {
+                        setIdx(i)
+                        setNavDrawerOpen(false)
+                      }}
                       aria-label={`Go to Question ${i + 1}`}
                     >
                       {i + 1}
@@ -282,15 +388,15 @@ export default function McqExamModal({
               <div className="mcq-nav-legend">
                 <div className="legend-row">
                   <span className="box answered" />
-                  <span>Answered ({answeredCount})</span>
+                  <span className="mcq-legend-label">Answered ({answeredCount})</span>
                 </div>
                 <div className="legend-row">
                   <span className="box unanswered" />
-                  <span>Not Answered ({unansweredCount})</span>
+                  <span className="mcq-legend-label">Not Answered ({unansweredCount})</span>
                 </div>
                 <div className="legend-row">
                   <span className="box marked" />
-                  <span>Marked for Review ({markedCount})</span>
+                  <span className="mcq-legend-label">Marked for Review ({markedCount})</span>
                 </div>
               </div>
 
@@ -302,6 +408,17 @@ export default function McqExamModal({
               >
                 <LuEraser /> Clear All Marks
               </button>
+
+              <button
+                type="button"
+                className="btn mcq-submit-green-btn w-100 mt-2 d-md-none"
+                onClick={() => {
+                  setNavDrawerOpen(false)
+                  setConfirmSubmit(true)
+                }}
+              >
+                <LuCheck /> Submit Exam
+              </button>
             </aside>
 
             {/* Center Panel: Question, Options & Actions */}
@@ -312,10 +429,17 @@ export default function McqExamModal({
                     <span className="mcq-q-count">
                       Question {idx + 1} of {paper.length}
                     </span>
-                    <div className="d-flex gap-1">
+                    <div className="mcq-q-head-actions">
                       <button
                         type="button"
-                        className="btn ui-btn ui-btn-ghost btn-sm p-1"
+                        className="btn ui-btn ui-btn-secondary btn-sm d-md-none mcq-top-submit-btn"
+                        onClick={() => setConfirmSubmit(true)}
+                      >
+                        <LuCheck /> Submit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn ui-btn ui-btn-ghost btn-sm p-1 d-none d-md-inline-flex"
                         disabled={idx === 0}
                         onClick={() => setIdx((i) => Math.max(0, i - 1))}
                         aria-label="Previous question"
@@ -324,7 +448,7 @@ export default function McqExamModal({
                       </button>
                       <button
                         type="button"
-                        className="btn ui-btn ui-btn-ghost btn-sm p-1"
+                        className="btn ui-btn ui-btn-ghost btn-sm p-1 d-none d-md-inline-flex"
                         disabled={idx === paper.length - 1}
                         onClick={() => setIdx((i) => Math.min(paper.length - 1, i + 1))}
                         aria-label="Next question"
@@ -335,10 +459,10 @@ export default function McqExamModal({
                   </div>
 
                   <div className="mcq-question-content">
-                    <h4 className="mcq-question-text">
-                      <span className="q-num">{idx + 1}. </span>
-                      <RichHtml as="span" value={curQ.question} />
-                    </h4>
+                    <div className="mcq-question-text">
+                      <span className="q-num">{idx + 1}.</span>
+                      <RichHtml as="div" className="mcq-q-body" value={stripOdia(curQ.question)} />
+                    </div>
 
                     {curQ.image && (
                       <div className="mcq-q-image-box">
@@ -357,23 +481,21 @@ export default function McqExamModal({
                             onClick={() => chooseOption(curQ, oi)}
                           >
                             <span className="opt-bubble">{L[k]}</span>
-                            <span className="opt-text">
-                              <RichHtml as="span" value={curQ.options[oi]} />
-                            </span>
+                            <RichHtml as="div" className="opt-text" value={stripOdia(curQ.options[oi])} />
                           </button>
                         )
                       })}
                     </div>
 
-                    <div className="mcq-review-check">
+                    <div className="mcq-review-check d-none d-md-block">
                       <label className="d-inline-flex align-items-center gap-2">
                         <input
                           type="checkbox"
                           className="form-check-input"
-                          checked={!!marked[curQ.id]}
+                          checked={curMarked}
                           onChange={() => toggleMarkForReview(curQ.id)}
                         />
-                        <span>Mark for Review</span>
+                        <span className="mcq-mark-label">Mark for Review</span>
                       </label>
                     </div>
                   </div>
@@ -381,68 +503,59 @@ export default function McqExamModal({
                   <div className="mcq-question-footer">
                     <button
                       type="button"
-                      className="btn ui-btn ui-btn-secondary"
+                      className="btn ui-btn ui-btn-secondary mcq-foot-btn"
                       disabled={idx === 0}
                       onClick={() => setIdx((i) => i - 1)}
                     >
-                      <LuArrowLeft /> Previous
+                      <LuArrowLeft /> <span className="mcq-foot-label">Previous</span>
                     </button>
-                    <button
-                      type="button"
-                      className="btn ui-btn ui-btn-primary"
-                      disabled={idx === paper.length - 1}
-                      onClick={() => setIdx((i) => i + 1)}
-                    >
-                      Next Question <LuArrowRight />
-                    </button>
+
+                    <div className="mcq-foot-mid d-md-none">
+                      <button
+                        type="button"
+                        className={`btn ui-btn mcq-foot-btn ${curMarked ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+                        onClick={() => toggleMarkForReview(curQ.id)}
+                        aria-pressed={curMarked}
+                      >
+                        <LuBookmark /> <span className="mcq-foot-label">{curMarked ? 'Marked' : 'Mark'}</span>
+                      </button>
+                      {curAnswered && (
+                        <button
+                          type="button"
+                          className="btn ui-btn ui-btn-ghost mcq-foot-btn"
+                          onClick={() => clearCurrentAnswer(curQ.id)}
+                          aria-label="Clear answer"
+                        >
+                          <LuEraser /> <span className="mcq-foot-label">Clear</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isLast ? (
+                      <button
+                        type="button"
+                        className="btn mcq-submit-green-btn mcq-foot-btn"
+                        onClick={() => setConfirmSubmit(true)}
+                      >
+                        <LuCheck /> <span className="mcq-foot-label">Submit Exam</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn ui-btn ui-btn-primary mcq-foot-btn"
+                        onClick={() => setIdx((i) => i + 1)}
+                      >
+                        <span className="mcq-foot-label">Next</span> <LuArrowRight />
+                      </button>
+                    )}
                   </div>
                 </>
               )}
             </main>
 
-            {/* Right Panel: Exam Information, Instructions & Submit */}
-            <aside className="mcq-panel-info" aria-label="Exam Information">
-              <div className="mcq-info-card">
-                <h4 className="info-card-title">
-                  <LuInfo /> Exam Information
-                </h4>
-                <div className="info-kv-row">
-                  <span>Total Questions</span>
-                  <b>{paper.length}</b>
-                </div>
-                <div className="info-kv-row">
-                  <span>Total Marks</span>
-                  <b>{totalMarks}</b>
-                </div>
-                <div className="info-kv-row">
-                  <span>Negative Marking</span>
-                  <b>{negVal ? `-${negVal}` : 'None'}</b>
-                </div>
-                <div className="info-kv-row">
-                  <span>Time Limit</span>
-                  <b>{timeLimitMin} Minutes</b>
-                </div>
-                <div className="info-kv-row">
-                  <span>Attempts Allowed</span>
-                  <b>{attemptLimit || 'Unlimited'}</b>
-                </div>
-              </div>
-
-              <div className="mcq-info-card instructions-card">
-                <h4 className="info-card-title">
-                  <LuBookmark /> Instructions
-                </h4>
-                <ul className="info-bullet-list">
-                  <li>Choose the best answer for each question.</li>
-                  <li>Each correct answer carries 1 mark.</li>
-                  {negVal > 0 && (
-                    <li>For each wrong answer, {negVal} mark will be deducted.</li>
-                  )}
-                  <li>You can mark a question for review anytime.</li>
-                  <li>Click &quot;Submit Exam&quot; to finish and see results.</li>
-                </ul>
-              </div>
-
+            {/* Right Panel: Exam Information, Instructions & Submit (Desktop) */}
+            <aside className="mcq-panel-info d-none d-lg-flex" aria-label="Exam Information">
+              {renderExamInfoCards()}
               <button
                 type="button"
                 className="btn mcq-submit-green-btn w-100"
@@ -453,13 +566,13 @@ export default function McqExamModal({
             </aside>
           </div>
         ) : (
-          /* Result Screen (Requirement 6) */
+          /* Result Screen */
           <div className="mcq-result-screen">
             <div className={`mcq-result-banner ${result?.passed ? 'passed' : 'failed'}`}>
               <div className="result-trophy">
                 <LuTrophy />
               </div>
-              <div>
+              <div className="mcq-result-banner-body">
                 <h3 className="result-headline">
                   {result?.passed ? 'Exam Completed Successfully!' : 'Exam Completed'}
                 </h3>
@@ -473,30 +586,30 @@ export default function McqExamModal({
             <div className="mcq-result-stats-row">
               <div className="res-stat-card ok">
                 <LuCircleCheck />
-                <div>
-                  <b>{result?.correct}</b>
-                  <span>Correct</span>
+                <div className="res-stat-meta">
+                  <strong className="res-stat-val">{result?.correct}</strong>
+                  <span className="res-stat-lbl">Correct</span>
                 </div>
               </div>
               <div className="res-stat-card bad">
                 <LuCircleX />
-                <div>
-                  <b>{result?.wrong}</b>
-                  <span>Incorrect</span>
+                <div className="res-stat-meta">
+                  <strong className="res-stat-val">{result?.wrong}</strong>
+                  <span className="res-stat-lbl">Incorrect</span>
                 </div>
               </div>
               <div className="res-stat-card skip">
                 <LuCircleAlert />
-                <div>
-                  <b>{result?.skipped}</b>
-                  <span>Unanswered</span>
+                <div className="res-stat-meta">
+                  <strong className="res-stat-val">{result?.skipped}</strong>
+                  <span className="res-stat-lbl">Unanswered</span>
                 </div>
               </div>
               <div className="res-stat-card time">
                 <LuClock />
-                <div>
-                  <b>{fmt(result?.timeTaken || 0)}</b>
-                  <span>Time Taken</span>
+                <div className="res-stat-meta">
+                  <strong className="res-stat-val">{fmt(result?.timeTaken || 0)}</strong>
+                  <span className="res-stat-lbl">Time Taken</span>
                 </div>
               </div>
             </div>
@@ -504,10 +617,18 @@ export default function McqExamModal({
             {/* Answer Review Section */}
             <div className="mcq-result-review-section">
               <div className="review-head">
-                <h4 className="review-title mb-0">Question Breakdown & Solutions</h4>
-                {paper.some(hasOptionExplanations) && (
-                  <button type="button" className="btn ui-btn ui-btn-secondary btn-sm" onClick={() => { setShowAllExp((v) => !v); setOpenExp({}) }} aria-pressed={showAllExp}>
-                    {showAllExp ? 'Hide all explanations' : 'Show all explanations'}
+                <h4 className="review-title mb-0">Question Breakdown &amp; Solutions</h4>
+                {settings.showSolution && (
+                  <button
+                    type="button"
+                    className="mcq-opt-toggle-btn"
+                    onClick={() => {
+                      setShowAllExp((v) => !v)
+                      setOpenExp({})
+                    }}
+                    aria-pressed={showAllExp}
+                  >
+                    {showAllExp ? 'Hide all option explanations' : 'Show all option explanations'}
                   </button>
                 )}
               </div>
@@ -516,21 +637,27 @@ export default function McqExamModal({
                   const ans = answers[q.id]
                   const answered = isAnswered(ans)
                   const right = answered && isCorrect(q, ans)
-                  const canExp = hasOptionExplanations(q)
+                  const hasOdia = /mcq-odia-tr/i.test(`${q.question || ''}${(q.options || []).join('')}`)
+                  const hasOptExp = hasOptionExplanations(q)
+                  const canExp = settings.showSolution
                   const expOn = canExp && (openExp[q.id] ?? showAllExp)
                   return (
                     <div
                       key={q.id}
-                      className={`review-item ${!answered ? 'skipped' : right ? 'correct' : 'wrong'}`}
+                      className={`review-item ${!answered ? 'skipped' : right ? 'correct' : 'wrong'} ${expOn ? 'show-odia-tr' : ''}`}
                     >
                       <div className="review-q-head">
-                        <b>Question {i + 1}:</b>
-                        <span className="ms-2">
-                          <RichHtml as="span" value={q.question} />
-                        </span>
-                        <span className={`review-badge ${!answered ? 'skipped' : right ? 'correct' : 'wrong'}`}>
-                          {!answered ? 'Unanswered' : right ? `+${questionMarks(q, settings)}` : `-${questionNegative(q, settings)}`}
-                        </span>
+                        <div className="mcq-review-top">
+                          <strong className="mcq-review-qnum">Question {i + 1}:</strong>
+                          <span className={`review-badge ${!answered ? 'skipped' : right ? 'correct' : 'wrong'}`}>
+                            {!answered ? 'Unanswered' : right ? `+${questionMarks(q, settings)}` : `-${questionNegative(q, settings)}`}
+                          </span>
+                        </div>
+                        <RichHtml
+                          as="div"
+                          className="mcq-review-question"
+                          value={expOn ? q.question : stripOdia(q.question)}
+                        />
                       </div>
                       <div className="review-options">
                         {q.order.map((oi, k) => {
@@ -541,26 +668,46 @@ export default function McqExamModal({
                               key={oi}
                               className={`review-opt ${isSol ? 'is-correct' : ''} ${picked && !isSol ? 'is-wrong' : ''} ${picked ? 'is-picked' : ''}`}
                             >
-                              <span className="bubble">{L[k]}</span>
-                              <span><RichHtml as="span" value={q.options[oi]} /></span>
-                              {isSol && <span className="ms-auto text-success fw-bold">✓ Correct</span>}
-                              {picked && !isSol && <span className="ms-auto text-danger fw-bold">✗ Selected</span>}
+                              <div className="mcq-review-opt-row">
+                                <span className="bubble">{L[k]}</span>
+                                <RichHtml
+                                  as="div"
+                                  className="mcq-review-opt-body"
+                                  value={expOn ? q.options[oi] : stripOdia(q.options[oi])}
+                                />
+                                {isSol && <span className="mcq-opt-badge is-correct">✓ Correct</span>}
+                                {picked && !isSol && <span className="mcq-opt-badge is-wrong">✗ Selected</span>}
+                              </div>
                               {expOn && String(q.optionExplanations?.[oi] || '').trim() !== '' && (
-                                <div className="review-opt-exp w-100">
-                                  <b>Why {L[k]}?</b> <RichHtml as="span" value={q.optionExplanations[oi]} />
+                                <div className="review-opt-exp">
+                                  <strong className="mcq-exp-label">Why {L[k]}?</strong>
+                                  <RichHtml as="div" className="mcq-exp-body" value={q.optionExplanations[oi]} />
                                 </div>
                               )}
                             </div>
                           )
                         })}
                       </div>
-                      {q.explanation && (
+
+                      {settings.showSolution && q.explanation && (
                         <div className="review-explanation">
-                          <b>Solution:</b> <RichHtml as="span" value={q.explanation} />
+                          <strong className="mcq-exp-label">Solution:</strong>
+                          <RichHtml as="div" className="mcq-exp-body" value={q.explanation} />
                         </div>
                       )}
+                      {expOn && !hasOptExp && !hasOdia && (
+                        <div className="review-opt-exp-empty">
+                          Per-option explanations are not added for this question.
+                        </div>
+                      )}
+
                       {canExp && (
-                        <button type="button" className="btn ui-btn ui-btn-ghost btn-sm mt-2" onClick={() => setOpenExp((m) => ({ ...m, [q.id]: !expOn }))} aria-expanded={expOn}>
+                        <button
+                          type="button"
+                          className="mcq-opt-toggle-btn mt-2"
+                          onClick={() => setOpenExp((m) => ({ ...m, [q.id]: !expOn }))}
+                          aria-expanded={expOn}
+                        >
                           {expOn ? 'Hide option explanations' : 'Explain every option'}
                         </button>
                       )}
@@ -589,7 +736,39 @@ export default function McqExamModal({
           </div>
         )}
 
-        {/* Confirmation Exit Warning (Requirement 5) */}
+        {/* Mobile Exam Info & Instructions Modal */}
+        {infoDrawerOpen && (
+          <div className="mcq-confirm-dialog-overlay" onClick={() => setInfoDrawerOpen(false)}>
+            <div className="mcq-confirm-box mcq-info-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="mcq-info-sheet-head">
+                <h3 className="mb-0">Exam Details</h3>
+                <button
+                  type="button"
+                  className="mcq-drawer-close"
+                  onClick={() => setInfoDrawerOpen(false)}
+                  aria-label="Close exam details"
+                >
+                  <LuX />
+                </button>
+              </div>
+              <div className="mcq-info-sheet-body">
+                {renderExamInfoCards()}
+              </div>
+              <button
+                type="button"
+                className="btn mcq-submit-green-btn w-100 mt-3"
+                onClick={() => {
+                  setInfoDrawerOpen(false)
+                  setConfirmSubmit(true)
+                }}
+              >
+                <LuCheck /> Submit Exam
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Exit Warning */}
         {confirmExit && (
           <div className="mcq-confirm-dialog-overlay" onClick={() => setConfirmExit(false)}>
             <div className="mcq-confirm-box" onClick={(e) => e.stopPropagation()}>
@@ -601,7 +780,7 @@ export default function McqExamModal({
                 Your answers will not be submitted and your progress in this attempt will be lost.
                 Are you sure you want to exit?
               </p>
-              <div className="d-flex gap-2 justify-content-center">
+              <div className="mcq-confirm-actions">
                 <button
                   type="button"
                   className="btn ui-btn ui-btn-secondary"
@@ -634,11 +813,13 @@ export default function McqExamModal({
               <h3>Submit Your Examination?</h3>
               <p>
                 You have answered <b>{answeredCount}</b> of <b>{paper.length}</b> questions.
-                {markedCount > 0 && <span> (<b>{markedCount}</b> marked for review).</span>}
+                {markedCount > 0 && (
+                  <span className="mcq-confirm-marked"> (<b>{markedCount}</b> marked for review).</span>
+                )}
                 <br />
                 Once submitted, you cannot change your answers.
               </p>
-              <div className="d-flex gap-2 justify-content-center">
+              <div className="mcq-confirm-actions">
                 <button
                   type="button"
                   className="btn ui-btn ui-btn-secondary"

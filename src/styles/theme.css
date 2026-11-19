@@ -1870,3 +1870,662 @@ button { font-family: inherit; }
 .mcq-clean-card{
   display: none;
 }
+
+/* ============================================================
+   MOBILE-APP UI/UX TRANSFORMATION (Screens 1, 6, 7, 8, 9, 9A)
+   Scoped cleanly to <= 767.98px / <= 575.98px
+   ============================================================ */
+
+/* Semantic MCQ Review & Confirm classes (all viewports) */
+.mcq-exam-title-wrap {
+  min-width: 0;
+  flex: 1;
+}
+.mcq-exam-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mcq-review-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+.mcq-review-qnum {
+  font-weight: 700;
+  color: #f8fafc;
+}
+.mcq-review-question {
+  display: block;
+  width: 100%;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.review-q-head {
+  flex-direction: column;
+  align-items: stretch;
+}
+.review-opt {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 12px;
+}
+.mcq-review-opt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+.mcq-review-opt-body {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.45;
+}
+.mcq-opt-badge {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-left: auto;
+  padding-top: 2px;
+}
+.mcq-opt-badge.is-correct {
+  color: #4ade80;
+}
+.mcq-opt-badge.is-wrong {
+  color: #f87171;
+}
+.mcq-exp-label {
+  display: inline;
+  margin-right: 4px;
+}
+.mcq-exp-body {
+  display: inline;
+  word-break: break-word;
+}
+.mcq-question-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.mcq-q-body {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+.mcq-option-card .opt-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  text-align: left;
+}
+.mcq-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: stretch;
+}
+.mcq-confirm-actions .btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+.mcq-panel-nav-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.mcq-drawer-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.mcq-info-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.mcq-info-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 62dvh;
+  overflow-y: auto;
+  text-align: left;
+}
+
+/* Screen 6: Collapsible Question List toggle (hidden on desktop) */
+.mcq-p1-mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .mcq-p1-list {
+    border-right: 0;
+    border-bottom: 1px solid rgba(40, 180, 255, 0.15);
+  }
+  .mcq-p1-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(15, 35, 78, 0.75);
+    border: 0;
+    color: #e2e8f0;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .mcq-p1-list:not(.is-open) .mcq-p1-head,
+  .mcq-p1-list:not(.is-open) .mcq-p1-scroll {
+    display: none;
+  }
+  .mcq-p1-list.is-open .mcq-p1-scroll {
+    max-height: 240px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Screen 1: Compact inline stat pills (2x2 slim grid) */
+  .stat-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    min-height: 0 !important;
+  }
+  .stat-icon {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.1rem !important;
+    border-radius: 9px !important;
+  }
+  .stat-label {
+    font-size: 0.74rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .stat-value {
+    font-size: 1.2rem !important;
+    line-height: 1.15 !important;
+  }
+  .stat-trend {
+    font-size: 0.68rem !important;
+  }
+
+  /* Screen 1: 1-line ellipsis for portal card descriptions */
+  .portal-cards .portal-card {
+    padding: 12px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .portal-cards .portal-desc {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .portal-cards .portal-name {
+    font-size: 0.98rem;
+    word-break: break-word;
+  }
+
+  /* Screen 7: Full-screen native-app Exam Modal */
+  .mcq-exam-overlay {
+    padding: 0 !important;
+  }
+  .mcq-exam-modal-container {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .mcq-exam-header {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+  .mcq-exam-badge-icon {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 1rem !important;
+    flex-shrink: 0;
+  }
+  .mcq-exam-title {
+    font-size: 0.95rem !important;
+  }
+  .mcq-exam-subtitle {
+    font-size: 0.72rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mcq-exam-header-right {
+    gap: 6px !important;
+    flex-shrink: 0;
+  }
+  .mcq-exam-timer-pill {
+    padding: 5px 8px !important;
+    font-size: 0.78rem !important;
+  }
+  .mcq-timer-prefix {
+    display: none;
+  }
+  .mcq-mobile-nav-trigger,
+  .mcq-mobile-info-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 36px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    background: rgba(14, 42, 92, 0.8);
+    color: #e2e8f0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mcq-mobile-info-trigger {
+    padding: 0 9px;
+  }
+  .mcq-exam-close-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  /* Screen 7: Question Navigator as Slide-Up Bottom Sheet */
+  .mcq-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.7);
+    z-index: 2090;
+  }
+  .mcq-panel-navigator {
+    display: none !important;
+  }
+  .mcq-panel-navigator.is-drawer-open {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 78dvh;
+    z-index: 2100;
+    background: #071430;
+    border-top: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 18px 18px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.75);
+  }
+  .mcq-panel-question {
+    padding: 12px 14px 0 !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .mcq-question-content {
+    flex: 1;
+    padding-bottom: 16px;
+  }
+  .mcq-question-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: rgba(7, 20, 48, 0.96);
+    backdrop-filter: blur(10px);
+    margin: 0 -14px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(56, 189, 248, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .mcq-foot-mid {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mcq-foot-btn {
+    min-height: 44px;
+    padding: 0 12px !important;
+    font-size: 0.82rem !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  /* Screen 8: Equal-height balanced confirmation buttons */
+  .mcq-confirm-box {
+    width: 100%;
+    padding: 20px 16px !important;
+  }
+  .mcq-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mcq-confirm-actions .btn {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.86rem;
+    line-height: 1.25;
+  }
+
+  /* Screens 9 & 9A: Result screen & breakdown mobile polish */
+  .mcq-result-screen {
+    padding: 14px !important;
+  }
+  .mcq-result-banner {
+    padding: 14px !important;
+    gap: 12px !important;
+  }
+  .result-headline {
+    font-size: 1.05rem !important;
+  }
+  .result-score-big {
+    font-size: 0.95rem !important;
+  }
+  .mcq-result-stats-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-bottom: 18px !important;
+  }
+  .res-stat-card {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    min-width: 0;
+  }
+  .res-stat-meta {
+    min-width: 0;
+  }
+  .res-stat-val {
+    font-size: 1.05rem !important;
+  }
+  .res-stat-lbl {
+    font-size: 0.74rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .review-head {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+  .review-item {
+    padding: 14px !important;
+  }
+  .review-opt {
+    padding: 8px 10px !important;
+  }
+  .review-explanation,
+  .review-opt-exp {
+    padding: 10px 12px !important;
+    font-size: 0.84rem !important;
+  }
+  .mcq-result-actions {
+    flex-direction: column;
+  }
+  .mcq-result-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  /* Screen 6: MCQ Block Editor mobile fixes */
+  .mcq-main-editor-card .ed-card-head {
+    gap: 8px;
+  }
+  .mcq-main-editor-card .ui-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: 100%;
+    width: 100%;
+  }
+  .mcq-main-editor-card .ui-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mcq-main-editor-card .ui-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .mcq-p2-editor {
+    padding: 12px !important;
+  }
+  .mcq-p2-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mcq-p2-type-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .mcq-p2-type-select {
+    width: auto !important;
+    flex: 1;
+    max-width: 100%;
+  }
+  .opt-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+  .opt-row .rt-field {
+    flex: 1 1 calc(100% - 42px);
+    min-width: 0;
+  }
+  .opt-row .opt-exp-toggle {
+    margin-left: auto;
+  }
+  .opt-row .icon-mini {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .ui-confirm .d-flex.justify-content-end {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+  }
+  .ui-confirm .d-flex.justify-content-end .btn {
+    min-height: 44px;
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   MOBILE RESULT HEADER & INLINE STAT PILLS + REMOVE FLOATING STUDY TOOLS
+   ============================================================ */
+@media (max-width: 767.98px) {
+  /* Keep X close button always visible on right */
+  .mcq-exam-header-left {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+  .mcq-exam-header-right {
+    flex-shrink: 0;
+  }
+
+  /* Compact inline Result Banner & 2x2 Stat Pills (image_7dfbe2.png) */
+  .mcq-result-banner {
+    padding: 10px 12px !important;
+    gap: 10px !important;
+    margin-bottom: 10px !important;
+    border-radius: 10px !important;
+  }
+  .result-trophy {
+    font-size: 1.5rem !important;
+    flex-shrink: 0;
+  }
+  .mcq-result-banner-body {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    flex: 1;
+    min-width: 0;
+  }
+  .result-headline {
+    font-size: 0.94rem !important;
+    margin: 0 !important;
+  }
+  .result-score-big {
+    font-size: 0.88rem !important;
+  }
+  .res-stat-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 8px 10px !important;
+    gap: 7px !important;
+    font-size: 1rem !important;
+    border-radius: 8px !important;
+  }
+  .res-stat-meta {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 5px !important;
+    flex-wrap: nowrap !important;
+    min-width: 0;
+  }
+  .res-stat-val {
+    font-size: 0.95rem !important;
+    line-height: 1 !important;
+    flex-shrink: 0;
+  }
+  .res-stat-lbl {
+    font-size: 0.72rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Remove floating Study Tools pill on mobile so it never covers bottom nav (image_7e032a.png) */
+  .teaching-floating-toolbar {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   LATEST FIXES: Copy Code, GoToTop, MCQ Tabs Mobile, Individual Toggle Feedback
+   ============================================================ */
+.review-opt-exp-empty {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.json-help-wrap {
+  position: relative;
+  margin-top: 6px;
+}
+.json-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rk-go-top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 1050;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: rgba(10, 32, 74, 0.92);
+  color: #e2e8f0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.rk-go-top-btn:hover {
+  background: #0d6efd;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 767.98px) {
+  .rk-go-top-btn {
+    right: 12px;
+    bottom: 76px;
+  }
+  .mcq-live-preview-card .ed-card-head {
+    gap: 8px;
+  }
+  .mcq-live-preview-card .ed-card-head > .d-flex {
+    width: 100%;
+    margin-left: 0 !important;
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+  .mcq-main-editor-card .ed-card-head {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 8px;
+  }
+  .mcq-main-editor-card .ui-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .mcq-main-editor-card .ui-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mcq-main-editor-card .ui-tab {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+}

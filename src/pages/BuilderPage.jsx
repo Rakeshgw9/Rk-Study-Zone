@@ -46,6 +46,7 @@ import StructureTree from '../components/builder/StructureTree'
 import UnitModal from '../components/builder/UnitModal'
 import { ChapterBar, ChapterView, Crumbs, UnitView, Welcome } from '../components/builder/Workspace'
 import { useConfirm } from '../components/ui/Confirm'
+import GoToTop from '../components/ui/GoToTop'
 import { useAuth } from '../context/AuthContext'
 import { usePrefs } from '../context/PrefsContext'
 import { useTheme } from '../context/ThemeContext'
@@ -1146,6 +1147,7 @@ export default function BuilderPage() {
             onAdd={addBlock}
           />
         )}
+        <GoToTop containerSelector=".bld-center" />
       </div>
     </RichTextProvider>
   )

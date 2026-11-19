@@ -169,3 +169,65 @@
 .pdf-export .tbl { width: 100% !important; table-layout: auto !important; }
 .pdf-export .tbl th, .pdf-export .tbl td { min-width: 0 !important; }
 .pdf-export .tbl tr { break-inside: avoid; page-break-inside: avoid; }
+
+/* Mobile toolbar & footer polish (Screens 4 & 5) */
+@media (max-width: 767.98px) {
+  .ed-card-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .ed-card-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .code-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .code-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .code-toolbar > button,
+  .code-menu > button {
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 11px;
+  }
+  .json-bottom-action-bar {
+    flex-direction: column;
+    align-items: stretch !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+  .json-bottom-left {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px !important;
+    width: 100%;
+  }
+  .json-bottom-left .json-status-pill {
+    grid-column: 1 / -1;
+    justify-content: center;
+    min-height: 36px;
+  }
+  .json-bottom-left .btn {
+    min-height: 36px;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 0.78rem;
+  }
+  .json-bottom-save {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+  .json-bottom-save .btn {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+}

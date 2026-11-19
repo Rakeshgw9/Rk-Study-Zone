@@ -52,6 +52,7 @@ export function sanitizeHtml(html = '') {
     const attrs = parseAttrs(m[2] || ''); let a = ''
     const st = attrs.style ? cleanStyle(attrs.style) : ''
     if (st) a += ` style="${escAttr(st)}"`
+    if (attrs.class) { const cls = attrs.class.split(/\s+/).filter((c) => c === "mcq-odia-tr").join(" "); if (cls) a += ` class="${cls}"` }
     if (name === 'a') { const h = safeHref(attrs.href); if (h) a += ` href="${escAttr(h)}" target="_blank" rel="noopener noreferrer"` }
     if (name === 'img') { const s = safeImgSrc(attrs.src); if (!s) continue; a += ` src="${escAttr(s)}" alt="${escAttr(attrs.alt || '')}"`; if (/^\d{1,4}$/.test(attrs.width || '')) a += ` width="${attrs.width}"`; if (/^\d{1,4}$/.test(attrs.height || '')) a += ` height="${attrs.height}"` }
     if ((name === 'td' || name === 'th')) { if (/^\d{1,2}$/.test(attrs.colspan || '')) a += ` colspan="${attrs.colspan}"`; if (/^\d{1,2}$/.test(attrs.rowspan || '')) a += ` rowspan="${attrs.rowspan}"` }
