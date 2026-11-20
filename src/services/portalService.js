@@ -248,7 +248,12 @@ async function removeAllSyllabusParts(portalId) {
   await Promise.allSettled(snap.docs.map((d) => deleteDoc(d.ref)))
 }
 
-/** Deletes the portal and its draft + published content */
+async function removeSubcollectionDocs(colName, portalId, subName) {
+  const snap = await getDocs(collection(db, colName, portalId, subName))
+  await Promise.allSettled(snap.docs.map((d) => deleteDoc(d.ref)))
+}
+
+/** Deletes the portal and its draft + published content (including chapter subcollections) */
 export async function deletePortal(id) {
   if (!isFirebaseConfigured) {
     localStorage.removeItem(sylKey(id))
@@ -256,7 +261,14 @@ export async function deletePortal(id) {
     localStorage.removeItem(`rk_demo_content_${id}`); localStorage.removeItem(`rk_demo_published_${id}`)
     writeAll(demoRead().filter((p) => p.id !== id)); return
   }
-  await Promise.allSettled([deleteDoc(doc(db, 'portalContent', id)), deleteDoc(doc(db, 'portalPublished', id)), removeSyllabusData(id), removeAllSyllabusParts(id)])
+  await Promise.allSettled([
+    removeSubcollectionDocs('portalContent', id, 'chapters'),
+    removeSubcollectionDocs('portalPublished', id, 'chapters'),
+    deleteDoc(doc(db, 'portalContent', id)),
+    deleteDoc(doc(db, 'portalPublished', id)),
+    removeSyllabusData(id),
+    removeAllSyllabusParts(id),
+  ])
   await deleteDoc(doc(db, 'portals', id))
 }
 

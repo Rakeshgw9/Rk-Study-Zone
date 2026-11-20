@@ -35,15 +35,22 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isStaff() && resource.data.ownerId == request.auth.uid);
     }
 
-    // ---- portalContent/{portalId} — DRAFT structure (CMS only) ----
+    // ---- portalContent/{portalId} — DRAFT structure & chapter blocks (CMS only) ----
     match /portalContent/{portalId} {
       allow read, write: if canEditPortal(portalId);
+      match /chapters/{chapterId} {
+        allow read, write: if canEditPortal(portalId);
+      }
     }
 
-    // ---- portalPublished/{portalId} — what students see ----
+    // ---- portalPublished/{portalId} — what students see (structure & chapter blocks) ----
     match /portalPublished/{portalId} {
       allow read: if signedIn();
       allow write: if canEditPortal(portalId);
+      match /chapters/{chapterId} {
+        allow read: if signedIn();
+        allow write: if canEditPortal(portalId);
+      }
     }
 
     // ---- portalSyllabus/{portalId} — optional syllabus file (stored in small parts) ----
