@@ -10,7 +10,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --import ./tests/_register.mjs --test tests/changes9.test.mjs tests/changes12.test.mjs tests/firestoreSafe.test.js tests/imageToText.test.mjs tests/jsonStudio.test.mjs tests/diagnostic.test.mjs"
+    "test": "node --import ./tests/_register.mjs --test tests/changes9.test.mjs tests/changes12.test.mjs tests/firestoreSafe.test.js tests/imageToText.test.mjs tests/jsonStudio.test.mjs tests/diagnostic.test.mjs tests/builderNav.test.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",

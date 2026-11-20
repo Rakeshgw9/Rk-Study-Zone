@@ -83,14 +83,14 @@ export function Welcome({ onCreate }) {
 }
 
 /**
- * Breadcrumb Component (Screenshot 1 Fix)
+ * Breadcrumb Component
  * Uses clean .crumb styling without white button outlines, matching RK dark navy theme.
  */
 export function Crumbs({ unit, chapter, block, onSelect, badge }) {
   return (
     <div className="ws-crumbs">
       <nav aria-label="Content path" className="d-flex align-items-center flex-wrap gap-1">
-        <button type="button" className="crumb" onClick={() => onSelect({})}>
+        <button type="button" className="crumb" onClick={() => onSelect({}, 'page')}>
           Units
         </button>
         {unit && (
@@ -99,7 +99,7 @@ export function Crumbs({ unit, chapter, block, onSelect, badge }) {
             <button
               type="button"
               className={`crumb ${!chapter ? 'cur' : ''}`}
-              onClick={() => onSelect({ unitId: unit.id })}
+              onClick={() => onSelect({ unitId: unit.id }, 'page')}
             >
               {unit.title}
             </button>
@@ -111,7 +111,7 @@ export function Crumbs({ unit, chapter, block, onSelect, badge }) {
             <button
               type="button"
               className={`crumb ${!block ? 'cur' : ''}`}
-              onClick={() => onSelect({ unitId: unit.id, chapterId: chapter.id })}
+              onClick={() => onSelect({ unitId: unit.id, chapterId: chapter.id }, 'page')}
             >
               {chapter.title}
             </button>
@@ -178,10 +178,6 @@ export function StatsRow({ unit }) {
   )
 }
 
-/**
- * Unit Page View (Screenshot 2 Fix)
- * Completely eliminates white bootstrap cards and restores dark navy surface with ws-list and ws-item buttons.
- */
 export function UnitView({ unit, onSelect, onAddChapter, onEdit }) {
   const fullBg =
     unit.fullBackgroundMode === 'image' && unit.fullBackgroundImage
@@ -284,7 +280,7 @@ export function UnitView({ unit, onSelect, onAddChapter, onEdit }) {
               type="button"
               className="ws-item"
               style={{ '--c': ch.color }}
-              onClick={() => onSelect({ unitId: unit.id, chapterId: ch.id })}
+              onClick={() => onSelect({ unitId: unit.id, chapterId: ch.id }, 'page')}
             >
               <span className="n">{i + 1}</span>
               <span className="min-w-0 flex-grow-1 text-start">
@@ -301,6 +297,7 @@ export function UnitView({ unit, onSelect, onAddChapter, onEdit }) {
 }
 
 export function ChapterBar({ chapter, onEdit, onDuplicate, onDelete, back }) {
+  const titlePx = `${chapter.headingSize || chapter.titleSize || 18}px`
   return (
     <div
       className={`ws-chbar chbg-${chapter.headingBackgroundMode || 'gradient'} ${
@@ -337,16 +334,18 @@ export function ChapterBar({ chapter, onEdit, onDuplicate, onDelete, back }) {
       <span className="ch-heading-copy">
         <span
           className="t"
+          title={chapter.title}
           style={{
-            fontSize: chapter.headingSize || chapter.titleSize || 18,
+            '--ch-title-size': titlePx,
+            fontSize: 'var(--ch-title-size)',
             color: chapter.headingTextColor || '#fff',
           }}
         >
           {chapter.title}
         </span>
-        {chapter.description && <small>{chapter.description}</small>}
+        {chapter.description && <small title={chapter.description}>{chapter.description}</small>}
       </span>
-      <span className="ms-auto d-flex gap-1">
+      <span className="ms-auto d-flex gap-1 ws-chbar-actions">
         <button
           type="button"
           className="icon-mini"
@@ -418,10 +417,20 @@ function ChapterBlockContent({ block, onEditData, onUploadImage, editor }) {
   return <div className="chapter-block-unsupported">Preview is not available for this block type.</div>
 }
 
+/** Extract clicked JSON Studio section id (if any) from a click event inside a block. */
+function sectionIdFromClick(e, blockId) {
+  const secEl = e.target?.closest?.('[id^="js-sec-"], [id^="sec-"]')
+  if (!secEl?.id) return null
+  if (secEl.id.startsWith('js-sec-')) return secEl.id.slice(7) || null
+  const prefix = `sec-${blockId}-`
+  if (secEl.id.startsWith(prefix)) return secEl.id.slice(prefix.length) || null
+  return null
+}
+
 /**
  * Chapter Artboard Workspace
- * Screenshot 3 Fix: RichToolbar is moved right above "Chapter content" and given
- * sticky behavior via .rt-sticky, appearing only when a rich-text block is selected!
+ * RichToolbar sits above "Chapter content" with sticky behavior via .rt-sticky,
+ * appearing only when a rich-text block is selected.
  */
 export function ChapterView({
   unit,
@@ -450,7 +459,6 @@ export function ChapterView({
             : undefined,
       }}
     >
-      {/* Screenshot 3 requirement: Sticky Formatting Toolbar placed above Chapter Content */}
       {showFormattingToolbar && (
         <div className="rt-sticky">
           <RichToolbar />
@@ -481,8 +489,8 @@ export function ChapterView({
 
       {chapter.blocks.map((sourceBlock, i) => {
         const b = workingBlock?.id === sourceBlock.id ? workingBlock : sourceBlock
-        const open = () =>
-          onSelect({ unitId: unit.id, chapterId: chapter.id, blockId: b.id })
+        const open = (sectionId = null) =>
+          onSelect({ unitId: unit.id, chapterId: chapter.id, blockId: b.id, sectionId }, 'page')
         return (
           <article
             key={b.id}
@@ -491,8 +499,10 @@ export function ChapterView({
             className={`chapter-artboard-block blk-${b.type} ${
               selectedBlockId === b.id ? 'is-selected' : ''
             } ${b.visible === false ? 'is-hidden' : ''}`}
-            onClick={() => {
-              if (selectedBlockId !== b.id) open()
+            onClick={(e) => {
+              if (e.target.closest('.blk-actions, .ws-insert-block')) return
+              const clickedSec = sectionIdFromClick(e, b.id)
+              open(clickedSec)
             }}
           >
             <button
@@ -501,7 +511,10 @@ export function ChapterView({
               title={`${blockTypeLabel(b.type)}${
                 b.visible === false ? ' (hidden from students)' : ''
               }`}
-              onClick={open}
+              onClick={(e) => {
+                e.stopPropagation()
+                open(null)
+              }}
             >
               <BlockBadge type={b.type} />
               <b>{blockTypeLabel(b.type)}</b>
@@ -511,6 +524,7 @@ export function ChapterView({
               className="blk-actions ws-block-acts"
               role="toolbar"
               aria-label={`${blockTypeLabel(b.type)} actions`}
+              onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
@@ -575,7 +589,10 @@ export function ChapterView({
             <button
               type="button"
               className="ws-insert-block chapter-insert"
-              onClick={() => onAddBlock(i + 1)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddBlock(i + 1)
+              }}
             >
               <LuCirclePlus /> Insert block after this
             </button>

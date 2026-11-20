@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import {
-  LuChartColumn,
   LuChevronDown,
   LuChevronRight,
   LuCircleAlert,
   LuCircleCheck,
   LuCloudUpload,
-  LuCopy,
   LuEllipsisVertical,
   LuEye,
-  LuHouse,
   LuLayers,
   LuListTree,
   LuLoaderCircle,
@@ -17,18 +14,15 @@ import {
   LuMoon,
   LuPanelLeft,
   LuPanelRight,
-  LuRocket,
   LuRotateCcw,
   LuSave,
   LuSettings,
   LuSquarePen,
   LuSun,
   LuUser,
-  LuX,
 } from 'react-icons/lu'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import Logo from '../components/Logo'
-import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 import AddBlockModal from '../components/builder/AddBlockModal'
 import ChapterModal from '../components/builder/ChapterModal'
@@ -51,8 +45,8 @@ import { useAuth } from '../context/AuthContext'
 import { usePrefs } from '../context/PrefsContext'
 import { useTheme } from '../context/ThemeContext'
 import { BLOCK_TYPES, contentReducer, findBlock, findChapter, newBlock, validateContent } from '../lib/content'
+import { builderNavReducer, INITIAL_NAV_STATE, isSameTarget, normalizeTarget } from '../lib/builderNav'
 import { clone, timeAgo, uid } from '../lib/id'
-import { plural } from '../lib/blockLabel'
 import { validateLessonJson } from '../lib/jsonLesson'
 import { duplicateSectionById, editStudioJson, moveSectionIndex, removeSectionById, studioFromJson, studioSectionList, sectionTitle } from '../lib/jsonStudio'
 import { scrollToStudioSection } from '../lib/jsonStudioDom'
@@ -110,30 +104,38 @@ export default function BuilderPage() {
   const [state, setState] = useState('loading') // loading | ready | missing | denied | error
   const [content, setContent] = useState({ units: [] })
   const contentRef = useRef(content)
-  const [sel, setSel] = useState({})
+
+  // Unified selection, scroll, and tree-open reducer
+  const [nav, dispatchNav] = useReducer(builderNavReducer, INITIAL_NAV_STATE)
+  const navRef = useRef(nav)
+  navRef.current = nav
+  const sel = nav.target
+
   const [working, setWorking] = useState(null) // { block, dirty }
+  const workingRef = useRef(working)
+  workingRef.current = working
+
   const [ui, setUiState] = useState({})
   const [save, setSave] = useState({ status: 'saved', at: null })
   const [version, setVersion] = useState(0)
   const [modal, setModal] = useState({})
   const [pane, setPane] = useState('workspace')
-  const [publishErrors, setPublishErrors] = useState(null)
-  const [publishLinks, setPublishLinks] = useState(false)
+  const [, setPublishErrors] = useState(null)
+  const [, setPublishLinks] = useState(false)
   const [insertAt, setInsertAt] = useState(null)
   const [leftHidden, setLeftHidden] = useState(false)
   const [rightHidden, setRightHidden] = useState(false)
   const [busy, setBusy] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
-  const [scrollReq, setScrollReq] = useState(null)
   const profileRef = useRef(null)
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef(null)
+  const centerRef = useRef(null)
+  const spyPausedUntilRef = useRef(0)
 
   // Change 11: Functional Undo & Redo History
   const [undoStack, setUndoStack] = useState([])
   const [redoStack, setRedoStack] = useState([])
-
-  const setUi = useCallback((p) => setUiState((u) => ({ ...u, ...p })), [])
 
   useEffect(() => {
     const close = (e) => {
@@ -161,7 +163,9 @@ export default function BuilderPage() {
         setContent(c)
         contentRef.current = c
         setSave({ status: 'saved', at: p.draftUpdatedAt || null })
-        if (c.units[0]) setSel({ unitId: c.units[0].id })
+        if (c.units[0]) {
+          dispatchNav({ type: 'SELECT', target: { unitId: c.units[0].id }, source: 'init' })
+        }
         setState('ready')
       } catch (e) {
         console.error(e)
@@ -174,31 +178,29 @@ export default function BuilderPage() {
   }, [portalId, user, loading])
 
   /* ---------- content mutations & history (Change 11) ---------- */
-  const apply = useCallback(
-    (action, record = true) => {
-      if (record) {
-        const snap = JSON.parse(JSON.stringify(contentRef.current))
-        setUndoStack((prev) => [...prev.slice(-40), snap])
-        setRedoStack([])
-      }
-      const next = contentReducer(contentRef.current, action)
-      contentRef.current = next
-      setContent(next)
-      setVersion((v) => v + 1)
-      return next
-    },
-    []
-  )
+  const apply = useCallback((action, record = true) => {
+    if (record) {
+      const snap = JSON.parse(JSON.stringify(contentRef.current))
+      setUndoStack((prev) => [...prev.slice(-40), snap])
+      setRedoStack([])
+    }
+    const next = contentReducer(contentRef.current, action)
+    contentRef.current = next
+    setContent(next)
+    setVersion((v) => v + 1)
+    return next
+  }, [])
 
   // commit working block edits into content
   const commitWorking = useCallback(() => {
-    if (working?.dirty) {
-      const exists = findBlock(contentRef.current, working.block.id).block
-      if (exists) apply({ type: 'updateBlock', blockId: working.block.id, block: working.block })
+    const cur = workingRef.current
+    if (cur?.dirty) {
+      const exists = findBlock(contentRef.current, cur.block.id).block
+      if (exists) apply({ type: 'updateBlock', blockId: cur.block.id, block: cur.block })
       setWorking((w) => (w ? { ...w, dirty: false } : w))
     }
     return contentRef.current
-  }, [working, apply])
+  }, [apply])
 
   const doSave = useCallback(
     async (c = contentRef.current) => {
@@ -253,12 +255,13 @@ export default function BuilderPage() {
     contentRef.current = last
     setContent(last)
     setVersion((v) => v + 1)
-    if (sel.blockId) {
-      const b = findBlock(last, sel.blockId).block
+    const activeBlkId = workingRef.current?.block?.id || navRef.current.target.blockId
+    if (activeBlkId) {
+      const b = findBlock(last, activeBlkId).block
       setWorking(b ? { block: clone(b), dirty: false } : null)
     }
     toast('Undo: Reverted last action')
-  }, [undoStack, commitWorking, sel.blockId, toast])
+  }, [undoStack, commitWorking, toast])
 
   const handleRedo = useCallback(() => {
     if (redoStack.length === 0) return
@@ -270,12 +273,13 @@ export default function BuilderPage() {
     contentRef.current = next
     setContent(next)
     setVersion((v) => v + 1)
-    if (sel.blockId) {
-      const b = findBlock(next, sel.blockId).block
+    const activeBlkId = workingRef.current?.block?.id || navRef.current.target.blockId
+    if (activeBlkId) {
+      const b = findBlock(next, activeBlkId).block
       setWorking(b ? { block: clone(b), dirty: false } : null)
     }
     toast('Redo: Restored undone action')
-  }, [redoStack, commitWorking, sel.blockId, toast])
+  }, [redoStack, commitWorking, toast])
 
   // Global Keyboard Shortcuts for Undo (Ctrl+Z) and Redo (Ctrl+Y / Ctrl+Shift+Z)
   useEffect(() => {
@@ -302,13 +306,26 @@ export default function BuilderPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleUndo, handleRedo])
 
-  /* ---------- selection (with Unsaved Guard when switching chapters/units) ---------- */
-  const select = useCallback(
-    async (next) => {
+  /* ---------- unified selection (with Unsaved Guard when switching chapters/units) ---------- */
+  const handleSelect = useCallback(
+    async (rawTarget, source = 'action', opts = {}) => {
+      const next = normalizeTarget(rawTarget)
+
+      // Scroll-spy updates tree highlight only; never switches editors, prompts, or scrolls
+      if (source === 'spy') {
+        if (!isSameTarget(navRef.current.target, next)) {
+          dispatchNav({ type: 'SPY', target: next })
+        }
+        return true
+      }
+
+      const cur = navRef.current.target
+      const curWorking = workingRef.current
       const switchingChapter =
-        working?.dirty &&
-        ((next.chapterId && next.chapterId !== sel.chapterId) ||
-          (!next.chapterId && sel.chapterId))
+        curWorking?.dirty &&
+        ((next.chapterId && next.chapterId !== cur.chapterId) ||
+          (!next.chapterId && cur.chapterId))
+
       if (switchingChapter) {
         const ok = await confirm({
           title: 'Unsaved changes in current chapter',
@@ -316,87 +333,169 @@ export default function BuilderPage() {
             'You have unsaved edits in the current block. Save changes and switch to the new chapter?',
           confirmText: 'Save & Switch',
         })
-        if (!ok) return
+        if (!ok) return false
         const updated = commitWorking()
         await doSave(updated)
-      } else {
+      } else if (curWorking?.dirty && curWorking.block.id !== next.blockId) {
         commitWorking()
       }
-      setSel(next)
+
+      if (source === 'tree') {
+        dispatchNav({ type: 'TREE_CLICK', target: next })
+      } else if (source === 'page') {
+        dispatchNav({ type: 'PAGE_CLICK', target: next })
+      } else {
+        dispatchNav({ type: 'SELECT', target: next, source, scroll: !!opts.scroll })
+      }
+
       if (next.blockId) {
-        const b = findBlock(contentRef.current, next.blockId).block
-        setWorking(b ? { block: clone(b), dirty: false } : null)
-        setUiState({})
+        if (curWorking?.block?.id !== next.blockId) {
+          const b = findBlock(contentRef.current, next.blockId).block
+          setWorking(b ? { block: clone(b), dirty: false } : null)
+          setUiState({})
+        }
       } else {
         setWorking(null)
       }
-      setPane('workspace')
-    },
-    [working, sel.chapterId, confirm, commitWorking, doSave]
-  )
 
-  /* ---------- left-sidebar layer tree: select a JSON section → select its block, open the section theme override, scroll the artboard ---------- */
-  const [secScroll, setSecScroll] = useState(null)
-  const selectSection = useCallback(
-    (target, sectionId) => {
-      if (sel.blockId === target.blockId) {
-        setSel(target)
+      if (source === 'tree' || source === 'action') {
         setPane('workspace')
-      } else {
-        select(target)
       }
-      setUi({ jsonSec: sectionId })
-      setSecScroll({ id: sectionId, n: Date.now() })
+      return true
     },
-    [sel.blockId, select, setUi]
-  )
-  useEffect(() => {
-    if (!secScroll) return undefined
-    return scrollToStudioSection(secScroll.id, { tries: 25, delay: 80 })
-  }, [secScroll])
-
-  /* ---------- auto scroll to target ---------- */
-  const requestScroll = useCallback(
-    (target) =>
-      setScrollReq({
-        unitId: target.unitId,
-        chapterId: target.chapterId,
-        blockId: target.blockId,
-        n: Date.now(),
-      }),
-    []
+    [confirm, commitWorking, doSave]
   )
 
-  useEffect(() => {
-    if (!scrollReq) return undefined
-    const visible = (el) => !!el && el.getClientRects().length > 0
-    const stickyOffset = () =>
-      ['.bld-header', '.bld-panes-tabs', '.ws-crumbs'].reduce((sum, q) => {
-        const el = document.querySelector(q)
-        return sum + (visible(el) ? el.getBoundingClientRect().height : 0)
-      }, 0) + 12
-    const target = () =>
-      scrollReq.blockId
-        ? document.getElementById(`blk-${scrollReq.blockId}`)
-        : scrollReq.chapterId
-        ? document.querySelector('.ws-chbar')
-        : null
+  const handleToggleOpen = useCallback((kind, id) => {
+    dispatchNav({ type: 'TOGGLE_OPEN', kind, id })
+  }, [])
 
-    const run = () => {
-      const el = target()
-      const top = el ? el.getBoundingClientRect().top + window.scrollY - stickyOffset() : 0
-      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-    }
-    const raf = requestAnimationFrame(run)
-    const fix = setTimeout(() => {
-      const el = target()
-      if (el && Math.abs(el.getBoundingClientRect().top - stickyOffset()) > 10) run()
-    }, 500)
+  // Bridge editor UI state so JsonBlockEditor / JsonStudioCanvas jsonSec routes through handleSelect
+  const setUi = useCallback(
+    (patch) => {
+      if (!patch || typeof patch !== 'object') return
+      if (Object.prototype.hasOwnProperty.call(patch, 'jsonSec')) {
+        const { jsonSec, ...rest } = patch
+        if (Object.keys(rest).length > 0) setUiState((u) => ({ ...u, ...rest }))
+        const cur = navRef.current.target
+        const blkId = workingRef.current?.block?.id || cur.blockId
+        if (cur.unitId && cur.chapterId && blkId) {
+          handleSelect(
+            { unitId: cur.unitId, chapterId: cur.chapterId, blockId: blkId, sectionId: jsonSec || null },
+            'page'
+          )
+        }
+        return
+      }
+      setUiState((u) => ({ ...u, ...patch }))
+    },
+    [handleSelect]
+  )
+
+  /* ---------- single-shot smooth scroll after layout settles (TREE_CLICK / explicit scroll only) ---------- */
+  useEffect(() => {
+    const { to, n } = nav.scroll
+    if (!n || !to) return undefined
+
+    // Pause scroll-spy while smooth scrolling so spy does not fight tree selection
+    spyPausedUntilRef.current = Date.now() + 900
+    let cancelSec = null
+    let raf1 = 0
+    let raf2 = 0
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (to.sectionId) {
+          cancelSec = scrollToStudioSection(to.sectionId, { blockId: to.blockId, tries: 12, delay: 60 })
+          return
+        }
+        const el = to.blockId
+          ? document.getElementById(`blk-${to.blockId}`)
+          : to.chapterId
+            ? document.querySelector('.ws-chbar')
+            : null
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      })
+    })
+
     return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(fix)
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+      cancelSec?.()
     }
-  }, [scrollReq])
+  }, [nav.scroll])
+
+  /* ---------- derived ---------- */
+  const unit = useMemo(() => content.units.find((u) => u.id === sel.unitId), [content, sel.unitId])
+  const chapter = useMemo(
+    () => unit?.chapters.find((c) => c.id === sel.chapterId),
+    [unit, sel.chapterId]
+  )
+  const block = working?.block && chapter?.blocks.some((b) => b.id === working.block.id) ? working.block : null
+
+  /* ---------- scroll-spy with IntersectionObserver (updates tree only) ---------- */
+  const chapterId = chapter?.id || null
+  const chapterBlockCount = chapter?.blocks?.length || 0
+  const workingBlockId = block?.id || null
+
+  useEffect(() => {
+    if (!unit?.id || !chapterId || typeof IntersectionObserver === 'undefined') return undefined
+    const container = centerRef.current
+    if (!container) return undefined
+
+    const nodes = Array.from(container.querySelectorAll('[id^="blk-"], [id^="sec-"], [id^="js-sec-"]'))
+    if (nodes.length === 0) return undefined
+
+    const visibleMap = new Map()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) visibleMap.set(entry.target, entry)
+          else visibleMap.delete(entry.target)
+        })
+        if (Date.now() < spyPausedUntilRef.current) return
+        if (visibleMap.size === 0) return
+
+        // Prefer section elements over block wrappers when both are in the active band
+        const candidates = Array.from(visibleMap.keys())
+        const secCandidates = candidates.filter((el) => el.id.startsWith('sec-') || el.id.startsWith('js-sec-'))
+        const pool = secCandidates.length > 0 ? secCandidates : candidates
+        pool.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)
+        const topEl = pool[0]
+        if (!topEl) return
+
+        let nextBlockId = null
+        let nextSectionId = null
+        if (topEl.id.startsWith('js-sec-')) {
+          nextSectionId = topEl.id.slice(7) || null
+          nextBlockId = topEl.closest('[data-block-id]')?.dataset.blockId || workingBlockId
+        } else if (topEl.id.startsWith('sec-')) {
+          const blkEl = topEl.closest('[data-block-id]')
+          nextBlockId = blkEl?.dataset.blockId || null
+          if (nextBlockId) {
+            const prefix = `sec-${nextBlockId}-`
+            nextSectionId = topEl.id.startsWith(prefix) ? topEl.id.slice(prefix.length) : null
+          }
+        } else if (topEl.id.startsWith('blk-')) {
+          nextBlockId = topEl.id.slice(4) || null
+          nextSectionId = null
+        }
+
+        if (nextBlockId) {
+          handleSelect(
+            { unitId: unit.id, chapterId, blockId: nextBlockId, sectionId: nextSectionId },
+            'spy'
+          )
+        }
+      },
+      { root: null, rootMargin: '-18% 0px -65% 0px', threshold: [0, 0.1, 0.25] }
+    )
+
+    nodes.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [unit?.id, chapterId, chapterBlockCount, workingBlockId, handleSelect])
 
   /* ---------- actions ---------- */
   const act = {
@@ -405,14 +504,14 @@ export default function BuilderPage() {
     addChapter: (unitId) => setModal({ chapter: true, unitId }),
     editChapter: (ch, u) => setModal({ chapter: true, unitId: u.id, editChapter: ch }),
     addBlock: (unitId, chapterId) => {
-      select({ unitId, chapterId })
+      handleSelect({ unitId, chapterId }, 'action')
       setModal({ addBlock: true, unitId, chapterId })
     },
     designUnit: (u) =>
       u.chapters[0]
-        ? select({ unitId: u.id, chapterId: u.chapters[0].id })
+        ? handleSelect({ unitId: u.id, chapterId: u.chapters[0].id }, 'action')
         : setModal({ chapter: true, unitId: u.id }),
-    designChapter: (u, ch) => select({ unitId: u.id, chapterId: ch.id }),
+    designChapter: (u, ch) => handleSelect({ unitId: u.id, chapterId: ch.id }, 'action'),
     toggleVisible: (b) => {
       const visible = b.visible === false
       apply({ type: 'updateBlock', blockId: b.id, block: { ...b, visible } })
@@ -423,32 +522,32 @@ export default function BuilderPage() {
       const newId = uid(kind === 'unit' ? 'unit' : kind === 'chapter' ? 'ch' : 'blk')
       if (kind === 'unit') {
         apply({ type: 'duplicateUnit', unitId: id, newId })
-        select({ unitId: newId })
+        handleSelect({ unitId: newId }, 'action')
       }
       if (kind === 'chapter') {
-        const { unit } = findChapter(contentRef.current, id)
+        const { unit: u } = findChapter(contentRef.current, id)
         apply({ type: 'duplicateChapter', chapterId: id, newId })
-        select({ unitId: unit.id, chapterId: newId })
+        handleSelect({ unitId: u.id, chapterId: newId }, 'action')
       }
       if (kind === 'block') {
-        const { unit, chapter } = findBlock(contentRef.current, id)
+        const { unit: u, chapter: ch } = findBlock(contentRef.current, id)
         apply({ type: 'duplicateBlock', blockId: id, newId })
-        select({ unitId: unit.id, chapterId: chapter.id, blockId: newId })
+        handleSelect({ unitId: u.id, chapterId: ch.id, blockId: newId }, 'action', { scroll: true })
       }
       toast(`${kind[0].toUpperCase() + kind.slice(1)} duplicated`)
     },
     /** Duplicate / delete / reorder one section of a JSON Studio block (left-sidebar layer tree). Goes through the normal undo history. */
     editSections: (blockId, fn) => {
       commitWorking()
-      const { block } = findBlock(contentRef.current, blockId)
-      if (!block) return false
-      const json = editStudioJson(block.data?.json, fn)
+      const { block: found } = findBlock(contentRef.current, blockId)
+      if (!found) return false
+      const json = editStudioJson(found.data?.json, fn)
       if (json === null) {
         toast('Fix the JSON errors first.', 'error')
         return false
       }
-      apply({ type: 'updateBlock', blockId, block: { ...block, data: { ...block.data, json } } })
-      if (working?.block.id === blockId) {
+      apply({ type: 'updateBlock', blockId, block: { ...found, data: { ...found.data, json } } })
+      if (workingRef.current?.block.id === blockId) {
         const fresh = findBlock(contentRef.current, blockId).block
         if (fresh) setWorking({ block: clone(fresh), dirty: false })
       }
@@ -468,7 +567,10 @@ export default function BuilderPage() {
       })
       if (!ok) return
       if (act.editSections(blockId, (l) => removeSectionById(l, secId))) {
-        if (ui.jsonSec === secId) setUi({ jsonSec: null })
+        if (navRef.current.target.sectionId === secId) {
+          const cur = navRef.current.target
+          handleSelect({ unitId: cur.unitId, chapterId: cur.chapterId, blockId: cur.blockId, sectionId: null }, 'page')
+        }
         toast('Section deleted')
       }
     },
@@ -488,14 +590,14 @@ export default function BuilderPage() {
         kind === 'unit'
           ? c.units.find((u) => u.id === id)?.title
           : kind === 'chapter'
-          ? findChapter(c, id).chapter?.title
-          : findBlock(c, id).block?.title
+            ? findChapter(c, id).chapter?.title
+            : findBlock(c, id).block?.title
       const extra =
         kind === 'unit'
           ? ' All chapters and blocks inside it will also be deleted.'
           : kind === 'chapter'
-          ? ' All blocks inside it will also be deleted.'
-          : ''
+            ? ' All blocks inside it will also be deleted.'
+            : ''
       const ok = await confirm({
         title: `Delete ${kind}?`,
         message: `“${name}” will be permanently deleted.${extra}`,
@@ -506,19 +608,19 @@ export default function BuilderPage() {
       if (kind === 'unit') {
         apply({ type: 'deleteUnit', unitId: id })
         setWorking(null)
-        setSel({})
+        dispatchNav({ type: 'SELECT', target: {}, source: 'action' })
       }
       if (kind === 'chapter') {
-        const { unit } = findChapter(c, id)
+        const { unit: u } = findChapter(c, id)
         apply({ type: 'deleteChapter', chapterId: id })
         setWorking(null)
-        setSel({ unitId: unit.id })
+        dispatchNav({ type: 'SELECT', target: { unitId: u.id }, source: 'action' })
       }
       if (kind === 'block') {
-        const { unit, chapter } = findBlock(c, id)
+        const { unit: u, chapter: ch } = findBlock(c, id)
         apply({ type: 'deleteBlock', blockId: id })
         setWorking(null)
-        setSel({ unitId: unit.id, chapterId: chapter.id })
+        dispatchNav({ type: 'SELECT', target: { unitId: u.id, chapterId: ch.id }, source: 'action' })
       }
       toast(`${kind[0].toUpperCase() + kind.slice(1)} deleted`)
     },
@@ -536,7 +638,7 @@ export default function BuilderPage() {
     } else {
       const id = uid('unit')
       apply({ type: 'addUnit', id, unit: data })
-      select({ unitId: id })
+      handleSelect({ unitId: id }, 'action')
       toast('Unit created')
     }
     setModal({})
@@ -549,7 +651,7 @@ export default function BuilderPage() {
     } else {
       const id = uid('ch')
       apply({ type: 'addChapter', unitId: modal.unitId, id, chapter: data })
-      select({ unitId: modal.unitId, chapterId: id })
+      handleSelect({ unitId: modal.unitId, chapterId: id }, 'action')
       toast('Chapter created')
     }
     setModal({})
@@ -561,10 +663,10 @@ export default function BuilderPage() {
     setInsertAt(null)
     const { unitId, chapterId } = modal
     setModal({})
-    setSel({ unitId, chapterId, blockId: b.id })
     setWorking({ block: clone(b), dirty: false })
     setUiState({})
-    requestScroll({ unitId, chapterId, blockId: b.id })
+    dispatchNav({ type: 'SELECT', target: { unitId, chapterId, blockId: b.id }, source: 'action', scroll: true })
+    setPane('workspace')
     toast(`${BLOCK_TYPES[type].label} block added`)
   }
 
@@ -640,13 +742,10 @@ export default function BuilderPage() {
     navigate(to)
   }
 
-  /* ---------- derived ---------- */
-  const unit = useMemo(() => content.units.find((u) => u.id === sel.unitId), [content, sel.unitId])
-  const chapter = useMemo(
-    () => unit?.chapters.find((c) => c.id === sel.chapterId),
-    [unit, sel.chapterId]
+  const edUi = useMemo(
+    () => ({ ...ui, jsonSec: block && sel.blockId === block.id ? sel.sectionId : null }),
+    [ui, block, sel.blockId, sel.sectionId]
   )
-  const block = working?.block && sel.blockId === working.block.id ? working.block : null
 
   if (loading)
     return (
@@ -708,7 +807,7 @@ export default function BuilderPage() {
     block,
     setBlock,
     setData,
-    ui,
+    ui: edUi,
     setUi,
     onSave: saveBlock,
     dirty: working?.dirty,
@@ -723,12 +822,19 @@ export default function BuilderPage() {
 
   const unitIndex = unit ? content.units.indexOf(unit) : -1
   const chIndex = chapter ? unit.chapters.indexOf(chapter) : -1
+  const saveKey = working?.dirty ? 'unsaved' : save.status
   const saveLabel = {
     saved: save.at ? `Saved ${timeAgo(save.at)}` : 'All changes saved',
     saving: 'Saving…',
     unsaved: 'Unsaved changes',
     error: 'Save failed',
-  }[working?.dirty ? 'unsaved' : save.status]
+  }[saveKey]
+  const saveShort = {
+    saved: 'Saved',
+    saving: 'Saving…',
+    unsaved: 'Unsaved',
+    error: 'Error',
+  }[saveKey]
 
   return (
     <RichTextProvider>
@@ -794,7 +900,7 @@ export default function BuilderPage() {
             <span className="bld-vsep mx-1 d-none d-sm-block" style={{ height: 22 }} />
 
             <span
-              className={`save-pill s-${working?.dirty ? 'unsaved' : save.status}`}
+              className={`save-pill s-${saveKey}`}
               title={save.error || saveLabel}
               role="status"
               aria-live="polite"
@@ -810,6 +916,7 @@ export default function BuilderPage() {
                   <LuCircleCheck />
                 )}
               </span>
+              <span className="save-chip-short d-xl-none">{saveShort}</span>
               <span className="save-text d-none d-xl-inline">{saveLabel}</span>
             </span>
 
@@ -1016,21 +1123,18 @@ export default function BuilderPage() {
             </button>
             <StructureTree
               content={content}
-              sel={sel}
-              onSelect={(s) => {
-                select(s)
-                setPane('workspace')
-                requestScroll(s)
-              }}
-              onSelectSection={selectSection}
-              activeSection={sel.blockId && block?.id === sel.blockId ? ui.jsonSec || null : null}
+              target={sel}
+              treeOpen={nav.treeOpen}
+              onSelect={handleSelect}
+              onToggleOpen={handleToggleOpen}
+              isDrawerOpen={pane === 'structure'}
               act={act}
               workingBlock={block}
               headRight={collapseLeft}
             />
           </aside>
 
-          <main className={`bld-center ${pane === 'workspace' ? 'show' : ''}`}>
+          <main ref={centerRef} className={`bld-center ${pane === 'workspace' ? 'show' : ''}`}>
             {!unit ? (
               content.units.length === 0 ? (
                 <Welcome onCreate={act.createUnit} />
@@ -1042,10 +1146,7 @@ export default function BuilderPage() {
             ) : !chapter ? (
               <UnitView
                 unit={unit}
-                onSelect={(s) => {
-                  select(s)
-                  requestScroll(s)
-                }}
+                onSelect={handleSelect}
                 onEdit={() => act.editUnit(unit)}
                 onAddChapter={() => act.addChapter(unit.id)}
               />
@@ -1060,10 +1161,7 @@ export default function BuilderPage() {
                       Editing: <strong>Unit {unitIndex + 1} · Ch {chIndex + 1}</strong> ({chapter.title})
                     </span>
                   }
-                  onSelect={(s) => {
-                    select(s)
-                    requestScroll(s)
-                  }}
+                  onSelect={handleSelect}
                 />
                 <ChapterBar
                   chapter={chapter}
@@ -1074,14 +1172,11 @@ export default function BuilderPage() {
                 <ChapterView
                   unit={unit}
                   chapter={chapter}
-                  selectedBlockId={sel.blockId}
+                  selectedBlockId={block?.id || null}
                   workingBlock={block}
-                  onSelect={(s) => {
-                    select(s)
-                    requestScroll(s)
-                  }}
+                  onSelect={handleSelect}
                   onEditData={setData}
-                  onUploadImage={async (f, blockId) => {
+                  onUploadImage={async (f) => {
                     if (!f) return
                     try {
                       const u = await uploadImage(f, `portals/${portalId}`, { max: 1400 })
@@ -1121,23 +1216,24 @@ export default function BuilderPage() {
               <ChapterActions
                 chapter={chapter}
                 unit={unit}
+                index={chIndex}
                 act={act}
-                onAddBlock={() => act.addBlock(unit.id, chapter.id)}
+                onCloseDrawer={() => setPane('workspace')}
                 headRight={collapseRight}
               />
             ) : unit ? (
               <UnitActions
                 unit={unit}
+                index={unitIndex}
+                count={content.units.length}
                 act={act}
-                onAddChapter={() => act.addChapter(unit.id)}
+                onCloseDrawer={() => setPane('workspace')}
                 headRight={collapseRight}
               />
             ) : (
               <SetupGuide
-                portal={portal}
                 content={content}
-                act={act}
-                onPublish={onPublish}
+                published={!!portal.publishedAt}
                 headRight={collapseRight}
               />
             )}
@@ -1149,7 +1245,8 @@ export default function BuilderPage() {
           <UnitModal
             show={true}
             onClose={() => setModal({})}
-            initial={modal.editUnit}
+            unit={modal.editUnit}
+            portalId={portalId}
             onSubmit={submitUnit}
           />
         )}
@@ -1157,7 +1254,9 @@ export default function BuilderPage() {
           <ChapterModal
             show={true}
             onClose={() => setModal({})}
-            initial={modal.editChapter}
+            chapter={modal.editChapter}
+            unitTitle={content.units.find((u) => u.id === modal.unitId)?.title}
+            portalId={portalId}
             onSubmit={submitChapter}
           />
         )}

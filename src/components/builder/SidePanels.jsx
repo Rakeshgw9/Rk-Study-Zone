@@ -41,35 +41,53 @@ function Action({ icon, label, sub, onClick, danger, right, disabled, disabledHi
 }
 const MoveBtns = ({ onUp, onDown, upOff, downOff }) => (
   <span className="act-move">
-    <button className="icon-mini" disabled={upOff} onClick={onUp} aria-label="Move up" title="Move up"><LuArrowUp /></button>
-    <button className="icon-mini" disabled={downOff} onClick={onDown} aria-label="Move down" title="Move down"><LuArrowDown /></button>
+    <button type="button" className="icon-mini" disabled={upOff} onClick={onUp} aria-label="Move up" title="Move up"><LuArrowUp /></button>
+    <button type="button" className="icon-mini" disabled={downOff} onClick={onDown} aria-label="Move down" title="Move down"><LuArrowDown /></button>
   </span>
 )
 
-export function UnitActions({ unit, index, count, act, headRight }) {
+export function UnitActions({ unit, index, count, act, headRight, onCloseDrawer }) {
+  const total = Number.isInteger(count) && count >= 0 ? count : 0
+  const idx = Number.isInteger(index) && index >= 0 ? index : 0
+  const posSub = total > 0 ? `Position ${idx + 1} of ${total}` : 'Reorder unit'
+  const run = (fn) => () => {
+    onCloseDrawer?.()
+    fn()
+  }
   return (
     <div className="panel-card">
       <div className="panel-title"><LuLayers /> <span className="panel-title-text">Unit Actions</span>{headRight}</div>
-      <Action icon={<LuWandSparkles />} label="Design Content" sub="Open the first chapter's content" onClick={() => act.designUnit(unit)} disabled={unit.chapters.length === 0} disabledHint="Add a chapter first" />
-      <Action icon={<LuSettings />} label="Unit Settings" sub="Title, icon, color, description" onClick={() => act.editUnit(unit)} />
-      <Action icon={<LuCopy />} label="Duplicate Unit" sub="Copy with all chapters & blocks" onClick={() => act.duplicate('unit', unit.id)} />
-      <Action icon={<LuMove />} label="Move Unit" sub={`Position ${index + 1} of ${count}`} onClick={() => {}} disabled={false} right={<MoveBtns upOff={index === 0} downOff={index === count - 1} onUp={() => act.move('unit', 'root', index, index - 1)} onDown={() => act.move('unit', 'root', index, index + 1)} />} />
-      <Action danger icon={<LuTrash2 />} label="Delete Unit" sub="Remove unit and its content" onClick={() => act.remove('unit', unit.id)} />
+      <Action icon={<LuWandSparkles />} label="Design Content" sub="Open the first chapter's content" onClick={run(() => act.designUnit(unit))} disabled={unit.chapters.length === 0} disabledHint="Add a chapter first" />
+      <Action icon={<LuSettings />} label="Unit Settings" sub="Title, icon, color, description" onClick={run(() => act.editUnit(unit))} />
+      <Action icon={<LuCopy />} label="Duplicate Unit" sub="Copy with all chapters & blocks" onClick={run(() => act.duplicate('unit', unit.id))} />
+      <Action icon={<LuMove />} label="Move Unit" sub={posSub} onClick={() => onCloseDrawer?.()} disabled={false} right={<MoveBtns upOff={idx <= 0} downOff={total === 0 || idx >= total - 1} onUp={run(() => act.move('unit', 'root', idx, idx - 1))} onDown={run(() => act.move('unit', 'root', idx, idx + 1))} />} />
+      <Action danger icon={<LuTrash2 />} label="Delete Unit" sub="Remove unit and its content" onClick={run(() => act.remove('unit', unit.id))} />
     </div>
   )
 }
 
-export function ChapterActions({ unit, chapter, index, act, headRight }) {
+export function ChapterActions({ unit, chapter, index, act, headRight, onCloseDrawer }) {
+  const chapters = unit?.chapters || []
+  const total = chapters.length
+  const resolvedIdx = Number.isInteger(index) && index >= 0
+    ? index
+    : chapters.findIndex((c) => c.id === chapter?.id)
+  const hasValidPos = resolvedIdx >= 0 && total > 0
+  const posSub = hasValidPos ? `Position ${resolvedIdx + 1} of ${total}` : `${total} chapters`
+  const run = (fn) => () => {
+    onCloseDrawer?.()
+    fn()
+  }
   return (
     <div className="panel-card">
       <div className="panel-title"><LuBookOpen /> <span className="panel-title-text">Chapter Actions</span>{headRight}</div>
-      <Action icon={<LuCirclePlus />} label="Add Block" sub="Ready-made, JSON or MCQ content" onClick={() => act.addBlock(unit.id, chapter.id)} />
-      <Action icon={<LuBookOpen />} label="Add Chapter" sub="New chapter in this unit" onClick={() => act.addChapter(unit.id)} />
-      <Action icon={<LuPalette />} label="Design Content" sub="Open the chapter content canvas" onClick={() => act.designChapter(unit, chapter)} />
-      <Action icon={<LuSettings />} label="Chapter Settings" sub="Title, color, background" onClick={() => act.editChapter(chapter, unit)} />
-      <Action icon={<LuCopy />} label="Duplicate Chapter" sub="Copy with all blocks" onClick={() => act.duplicate('chapter', chapter.id)} />
-      <Action icon={<LuMove />} label="Move Chapter" sub={`Position ${index + 1} of ${unit.chapters.length}`} onClick={() => {}} right={<MoveBtns upOff={index === 0} downOff={index === unit.chapters.length - 1} onUp={() => act.move('chapter', unit.id, index, index - 1)} onDown={() => act.move('chapter', unit.id, index, index + 1)} />} />
-      <Action danger icon={<LuTrash2 />} label="Delete Chapter" sub="Remove chapter and its blocks" onClick={() => act.remove('chapter', chapter.id)} />
+      <Action icon={<LuCirclePlus />} label="Add Block" sub="Ready-made, JSON or MCQ content" onClick={run(() => act.addBlock(unit.id, chapter.id))} />
+      <Action icon={<LuBookOpen />} label="Add Chapter" sub="New chapter in this unit" onClick={run(() => act.addChapter(unit.id))} />
+      <Action icon={<LuPalette />} label="Design Content" sub="Open the chapter content canvas" onClick={run(() => act.designChapter(unit, chapter))} />
+      <Action icon={<LuSettings />} label="Chapter Settings" sub="Title, color, background" onClick={run(() => act.editChapter(chapter, unit))} />
+      <Action icon={<LuCopy />} label="Duplicate Chapter" sub="Copy with all blocks" onClick={run(() => act.duplicate('chapter', chapter.id))} />
+      <Action icon={<LuMove />} label="Move Chapter" sub={posSub} onClick={() => onCloseDrawer?.()} right={<MoveBtns upOff={!hasValidPos || resolvedIdx <= 0} downOff={!hasValidPos || resolvedIdx >= total - 1} onUp={run(() => act.move('chapter', unit.id, resolvedIdx, resolvedIdx - 1))} onDown={run(() => act.move('chapter', unit.id, resolvedIdx, resolvedIdx + 1))} />} />
+      <Action danger icon={<LuTrash2 />} label="Delete Chapter" sub="Remove chapter and its blocks" onClick={run(() => act.remove('chapter', chapter.id))} />
     </div>
   )
 }

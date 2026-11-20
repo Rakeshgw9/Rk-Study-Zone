@@ -8,6 +8,7 @@ import { uploadImage } from '../../services/storageService'
 import { BLEND_MODES, HEADING_IMAGE_DEFAULTS, HEADING_IMAGE_KEYS, HEADING_PRESETS, IMAGE_STYLES, POSITIONS } from '../../lib/chapterHeading'
 
 const slugify = (value = '') => value.toLowerCase().trim().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+const definedEntries = (obj) => Object.fromEntries(Object.entries(obj || {}).filter(([, v]) => v !== undefined))
 const blank = {
   title: '', description: '', titleSize: 28, color: '#0a84ff',
   headingSize: 28, headingTextColor: '#ffffff', headingAccentColor: '#0d6efd', headingBackgroundMode: 'gradient', headingStartColor: '#087f5b', headingEndColor: '#0d6efd', headingSolidColor: '#173b83',
@@ -66,21 +67,37 @@ function HeadingImageSettings({ f, patch, busy, onPick }) {
   )
 }
 
-export default function ChapterModal({ show, onClose, onSubmit, chapter, unitTitle, portalId }) {
+export default function ChapterModal({ show, onClose, onSubmit, chapter, initial, unitTitle, portalId }) {
+  const source = chapter ?? initial ?? null
   const [f, setF] = useState(blank)
   const [err, setErr] = useState('')
   const [settingsTab, setSettingsTab] = useState('general')
   const [device, setDevice] = useState('desktop')
   const [imgBusy, setImgBusy] = useState(false)
-  useEffect(() => { if (show) { setF({ ...blank, ...(chapter ? {} : NEW_CHAPTER), ...(chapter || {}), slug: chapter?.slug || slugify(chapter?.title || '') }); setErr(''); setSettingsTab('general'); setDevice('desktop') } }, [show, chapter])
+  useEffect(() => {
+    if (show) {
+      const saved = definedEntries(source)
+      setF({
+        ...blank,
+        ...(source ? {} : NEW_CHAPTER),
+        ...saved,
+        title: saved.title ?? '',
+        description: saved.description ?? '',
+        slug: saved.slug || slugify(saved.title || ''),
+      })
+      setErr('')
+      setSettingsTab('general')
+      setDevice('desktop')
+    }
+  }, [show, source])
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }))
   const patch = (p) => setF((x) => ({ ...x, ...p }))
   const slug = f.slug || slugify(f.title)
-  const previewUrl = useMemo(() => `${window.location.origin}/#/learn/${portalId || ''}/${slug || chapter?.id || 'chapter'}`, [portalId, chapter?.id, slug])
+  const previewUrl = useMemo(() => `${window.location.origin}/#/learn/${portalId || ''}/${slug || source?.id || 'chapter'}`, [portalId, source?.id, slug])
   const submit = (e) => {
     e.preventDefault()
     if (!f.title.trim()) { setSettingsTab('general'); return setErr('Chapter title is required.') }
-    onSubmit({ ...f, title: f.title.trim(), description: f.description.trim(), slug: slugify(f.slug || f.title) })
+    onSubmit({ ...f, title: f.title.trim(), description: (f.description || '').trim(), slug: slugify(f.slug || f.title) })
   }
   const isImage = f.headingBackgroundMode === 'image'
   const headingBackground = isImage ? '#0b1f44' : f.headingBackgroundMode === 'solid' ? f.headingSolidColor : `linear-gradient(110deg, ${f.headingStartColor}, ${f.headingEndColor})`
@@ -92,7 +109,7 @@ export default function ChapterModal({ show, onClose, onSubmit, chapter, unitTit
     finally { setImgBusy(false) }
   }
   const fullBackground = f.fullBackgroundMode === 'solid' ? f.fullSolidColor : `linear-gradient(120deg, ${f.fullStartColor}, ${f.fullEndColor})`
-  const name = f.title.trim() || chapter?.title || 'Chapter name'
+  const name = f.title.trim() || source?.title || 'Chapter name'
   const banner = (small) => (
     <div className={`chapter-settings-preview ${small ? 'compact' : ''} ${isImage ? 'has-hb' : ''}`} style={{ background: headingBackground, color: f.headingTextColor, borderColor: f.headingAccentColor }}>
       <HeadingBgLayers chapter={f} />
