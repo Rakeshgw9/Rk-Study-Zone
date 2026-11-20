@@ -40,7 +40,7 @@ const stripOdia = (html = '') =>
   String(html).replace(/<span[^>]*class=["']?mcq-odia-tr["']?[^>]*>[\s\S]*?<\/span>/gi, '')
 
 /**
- * Full-Featured MCQ Examination Modal (Desktop 3-panel + Mobile Native Full-Screen App View)
+- Full-Featured MCQ Examination Modal (Desktop 3-panel + Mobile Native Full-Screen App View)
  */
 export default function McqExamModal({
   show,
@@ -663,7 +663,7 @@ export default function McqExamModal({
                             value={expOn ? q.question : stripOdia(q.question)}
                           />
                           {expOn && String(q.odiaQuestion || '').trim() !== '' && (
-                            <span className="mcq-odia-tr">{q.odiaQuestion}</span>
+                            <RichHtml as="span" className="mcq-odia-tr" value={q.odiaQuestion} />
                           )}
                         </div>
                       </div>
@@ -686,7 +686,9 @@ export default function McqExamModal({
                                     as="div"
                                     value={expOn ? q.options[oi] : stripOdia(q.options[oi])}
                                   />
-                                  {expOn && optOdia !== '' && <span className="mcq-odia-tr">{optOdia}</span>}
+                                  {expOn && optOdia !== '' && (
+                                    <RichHtml as="span" className="mcq-odia-tr" value={optOdia} />
+                                  )}
                                 </div>
                                 {isSol && <span className="mcq-opt-badge is-correct">✓ Correct</span>}
                                 {picked && !isSol && <span className="mcq-opt-badge is-wrong">✗ Selected</span>}
@@ -695,7 +697,9 @@ export default function McqExamModal({
                                 <div className="review-opt-exp">
                                   <strong className="mcq-exp-label">Why {L[k]}?</strong>
                                   {optExpEn !== '' && <RichHtml as="div" className="mcq-exp-body" value={optExpEn} />}
-                                  {optExpOd !== '' && <small className="d-block mt-1">{optExpOd}</small>}
+                                  {optExpOd !== '' && (
+                                    <RichHtml as="small" className="d-block mt-1" value={optExpOd} />
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -711,7 +715,8 @@ export default function McqExamModal({
                           )}
                           {String(q.odiaExplanation || '').trim() !== '' && (
                             <small>
-                              <b>ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ:</b> {q.odiaExplanation}
+                              <b>ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ:</b>{' '}
+                              <RichHtml as="span" value={q.odiaExplanation} />
                             </small>
                           )}
                         </div>

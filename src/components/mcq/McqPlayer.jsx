@@ -10,8 +10,8 @@ const safeImg = (u = '') => (/^(https?:\/\/|data:image\/)/i.test(u) ? u : '')
 const stripOdia = (html = '') => String(html).replace(/<span[^>]*class=["']?mcq-odia-tr["']?[^>]*>[\s\S]*?<\/span>/gi, '')
 
 /**
- * MCQ test player (practice test and chapter exam).
- * mode: 'preview' (CMS — nothing saved) | 'student'      exam: { instructions } turns on the full chapter-exam experience
+- MCQ test player (practice test and chapter exam).
+- mode: 'preview' (CMS — nothing saved) | 'student'      exam: { instructions } turns on the full chapter-exam experience
  */
 export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, lastResult, onSubmit, compact = false, autoStart = false, exam = null, onClose, onPhase }) {
   const s = { ...DEFAULT_MCQ_SETTINGS, ...data.settings, ...(exam ? { autoSubmit: true } : {}) }
@@ -186,7 +186,7 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                       <div className="mcq-review-qbody">
                         <RichHtml as="div" value={expOn ? x.question : stripOdia(x.question)} />
                         {expOn && String(x.odiaQuestion || '').trim() !== '' && (
-                          <span className="mcq-odia-tr">{x.odiaQuestion}</span>
+                          <RichHtml as="span" className="mcq-odia-tr" value={x.odiaQuestion} />
                         )}
                       </div>
                       <small className="mcq-q-score">
@@ -209,14 +209,18 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                               <span className="mcq-player-opt-letter">{L[k]}.</span>
                               <div className="mcq-player-opt-body">
                                 <RichHtml as="div" value={expOn ? x.options[oi] : stripOdia(x.options[oi])} />
-                                {expOn && optOdia !== '' && <span className="mcq-odia-tr">{optOdia}</span>}
+                                {expOn && optOdia !== '' && (
+                                  <RichHtml as="span" className="mcq-odia-tr" value={optOdia} />
+                                )}
                               </div>
                             </div>
                             {expOn && (optExpEn !== '' || optExpOd !== '') && (
                               <small className="d-block mcq-opt-exp">
                                 <strong className="mcq-exp-label">Why {L[k]}?</strong>{' '}
                                 {optExpEn !== '' && <RichHtml as="div" className="mcq-exp-body" value={optExpEn} />}
-                                {optExpOd !== '' && <small className="d-block mt-1">{optExpOd}</small>}
+                                {optExpOd !== '' && (
+                                  <RichHtml as="small" className="d-block mt-1" value={optExpOd} />
+                                )}
                               </small>
                             )}
                           </div>
@@ -232,7 +236,8 @@ export default function McqPlayer({ data, mode = 'student', attemptsUsed = 0, la
                         )}
                         {String(x.odiaExplanation || '').trim() !== '' && (
                           <small>
-                            <b>ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ:</b> {x.odiaExplanation}
+                            <b>ବିସ୍ତୃତ ଓଡ଼ିଆ ସମାଧାନ:</b>{' '}
+                            <RichHtml as="span" value={x.odiaExplanation} />
                           </small>
                         )}
                       </div>
