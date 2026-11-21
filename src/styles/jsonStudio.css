@@ -608,7 +608,8 @@
     list-style: none;
     margin: 2px 0 4px 20px;
     padding: 0 0 0 8px;
-    border-left: 2px solid rgba(148, 163, 184, .28);
+     border-left: 1px solid;
+    border-image: linear-gradient( to bottom, #1c3a5ecc, #1c3a5ecc, rgba(112, 151, 197, .05) ) 1;
 }
 
 .tree-row.tree-sec {
@@ -2127,3 +2128,245 @@
 }
 
 /* @studio-css:start — generated from studioCss() in src/lib/jsonStudio.js. Do not edit by hand: run `npm run sync:css`. *//* @studio-css:end */
+
+
+/* ============================================================
+   INLINE & SECTION-BOTTOM IMAGE ATTACHMENTS (JSON STUDIO)
+   ============================================================ */
+
+.json-artboard-content .js-inline-images {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-inline-img-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.json-artboard-content .js-inline-img-item .js-img {
+    margin-top: 0;
+}
+
+.json-artboard-content .js-inline-img-head {
+    font-size: 0.88em;
+    font-weight: 700;
+    color: var(--js-heading);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* Hover-revealed "+ Add Image" button below each paragraph / list item / example / formula */
+.json-artboard-content .js-inline-img-row {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.json-artboard-content .js-inline-img-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--js-accent) 45%, var(--js-border));
+    background: color-mix(in srgb, var(--js-accent) 12%, var(--js-surface));
+    color: var(--js-accent);
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.json-artboard-content .js-el:hover .js-inline-img-btn,
+.json-artboard-content .js-el:focus-within .js-inline-img-btn,
+.json-artboard-content .js-sec:hover .js-img-add-more .js-inline-img-btn,
+.json-artboard-content .js-sec:focus-within .js-img-add-more .js-inline-img-btn,
+.json-artboard-content .js-inline-img-btn:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.json-artboard-content .js-inline-img-btn:hover {
+    background: color-mix(in srgb, var(--js-accent) 22%, var(--js-surface));
+    border-color: var(--js-accent);
+}
+
+.json-artboard-content .js-inline-img-btn svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+/* Builder image card & inline editor */
+.json-artboard-content .js-img-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.json-artboard-content .js-img-card {
+    position: relative;
+    border: 1px solid color-mix(in srgb, var(--js-accent) 26%, var(--js-border));
+    border-radius: 12px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--js-text) 4%, var(--js-surface));
+}
+
+.json-artboard-content .js-img-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.json-artboard-content .js-img-card-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.json-artboard-content .js-img-card-tools button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    border: 1px solid var(--js-border);
+    background: var(--js-surface);
+    color: var(--js-text);
+    cursor: pointer;
+    padding: 0;
+}
+
+.json-artboard-content .js-img-card-tools button:hover:not(:disabled) {
+    border-color: var(--js-accent);
+    color: var(--js-accent);
+}
+
+.json-artboard-content .js-img-card-tools button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.json-artboard-content .js-img-card-tools button.danger:hover:not(:disabled) {
+    border-color: #f87171;
+    color: #f87171;
+}
+
+.json-artboard-content .js-img-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--js-border);
+}
+
+.json-artboard-content .js-img-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.json-artboard-content .js-img-form .js-url,
+.json-artboard-content .js-img-input {
+    flex: 1 1 180px;
+    min-width: 0;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--js-border);
+    background: var(--js-bg);
+    color: var(--js-text);
+    font-size: 0.82rem;
+    outline: none;
+}
+
+.json-artboard-content .js-img-input:focus,
+.json-artboard-content .js-img-form .js-url:focus {
+    border-color: var(--js-accent);
+}
+
+.json-artboard-content .js-img-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 11px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--js-accent) 50%, var(--js-border));
+    background: color-mix(in srgb, var(--js-accent) 14%, var(--js-surface));
+    color: var(--js-accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.json-artboard-content .js-img-upload-btn input[type="file"] {
+    display: none;
+}
+
+.json-artboard-content .js-img-done-btn {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--js-accent);
+    background: var(--js-accent);
+    color: #061326;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.json-artboard-content .js-img-alt-tag {
+    font-size: 0.72rem;
+    opacity: 0.72;
+    margin-top: 2px;
+}
+
+.json-artboard-content .js-img-add-more {
+    display: flex;
+    align-items: center;
+    margin-top: 2px;
+}
+
+@media (hover: none), (max-width: 767.98px) {
+    .json-artboard-content .js-inline-img-btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+@media print {
+    .json-artboard-content .js-inline-img-row,
+    .json-artboard-content .js-img-add-more,
+    .json-artboard-content .js-img-card-tools,
+    .json-artboard-content .js-img-form,
+    .json-artboard-content .js-img-alt-tag {
+        display: none !important;
+    }
+}
+
+.pdf-export .json-artboard-content .js-inline-img-row,
+.pdf-export .json-artboard-content .js-img-add-more,
+.pdf-export .json-artboard-content .js-img-card-tools,
+.pdf-export .json-artboard-content .js-img-form,
+.pdf-export .json-artboard-content .js-img-alt-tag {
+    display: none !important;
+}

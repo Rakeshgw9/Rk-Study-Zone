@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { LuArrowDown, LuArrowUp, LuCopy, LuPlus, LuTrash2 } from 'react-icons/lu'
+import { LuArrowDown, LuArrowUp, LuCopy, LuImagePlus, LuPencil, LuPlus, LuTrash2, LuUpload } from 'react-icons/lu'
 import { fromEditable } from '../../lib/richText'
 import { scrollToStudioSection } from '../../lib/jsonStudioDom'
 import { handleProps, targetProps } from '../../lib/dnd'
@@ -12,8 +12,10 @@ import {
   SECTION_SCHEMA,
   addExample,
   addFormula,
+  addItemImage,
   addParagraph,
   addSectionBelow,
+  addSectionImage,
   dupItem,
   duplicateSection,
   fmt,
@@ -21,19 +23,25 @@ import {
   isSectionType,
   listAddItem,
   moveItem,
+  moveItemImage,
   moveItemTo,
   moveSection,
+  moveSectionImage,
   moveSectionTo,
   mutateSection,
   normalizeControls,
   removeItem,
+  removeItemImage,
   removeSection,
+  removeSectionImage,
   safeImageUrl,
   setSectionValue,
   tableAddCol,
   tableAddRow,
   tableCols,
   textStyleVars,
+  updateItemImage,
+  updateSectionImage,
   youtubeEmbedUrl,
   youtubeWatchUrl,
 } from '../../lib/jsonStudio'
@@ -137,8 +145,8 @@ const Grip = ({ drag }) => (
   <span className="js-grip" role="button" aria-label="Drag to reorder" title="Drag to reorder" {...drag}>⋮⋮</span>
 )
 
-/** Compact floating toolbar for ONE element (paragraph, list item, table row, formula box, example box): drag grip + duplicate / move / delete (+ Odia). */
-function ElTools({ drag, onDup, onUp, onDown, onDel, canUp, canDown, onOdia, odiaOn }) {
+/** Compact floating toolbar for ONE element (paragraph, list item, table row, formula box, example box): drag grip + duplicate / move / delete. */
+function ElTools({ drag, onDup, onUp, onDown, onDel, canUp, canDown }) {
   return (
     <div className="js-el-tools" role="toolbar" aria-label="Element actions" onMouseDown={stopFocus}>
       {drag && <Grip drag={drag} />}
@@ -178,6 +186,163 @@ function Tools({ i, n, drag, onDup, onUp, onDown, onAdd, onRemove }) {
         )}
       </span>
       <button type="button" className="danger" onClick={onRemove} title="Remove section" aria-label="Remove section"><LuTrash2 /></button>
+    </div>
+  )
+}
+
+/**
+ * Editable stack of attached images (used under paragraphs, list items, examples, formulas, and at the bottom of every section).
+ * Supports multiple images, local upload (Git/CDN via onUploadImage) or pasted URL, small heading, alt text, and optional caption.
+ */
+function ImageStackEditor({
+  images = [],
+  scopeKey,
+  showEmptyHoverBtn = false,
+  onAdd,
+  onUpdate,
+  onMove,
+  onRemove,
+  onUploadFile,
+  uploadingKey,
+}) {
+  const [editingIds, setEditingIds] = useState(() => new Set())
+  const openEdit = (id) => setEditingIds((prev) => { const n = new Set(prev); n.add(id); return n })
+  const closeEdit = (id) => setEditingIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+  const toggleEdit = (id) => setEditingIds((prev) => {
+    const n = new Set(prev)
+    if (n.has(id)) n.delete(id)
+    else n.add(id)
+    return n
+  })
+
+  const handleAdd = () => {
+    const added = onAdd()
+    if (added?.id) openEdit(added.id)
+  }
+
+  if (!images.length) {
+    if (!showEmptyHoverBtn) return null
+    return (
+      <div className="js-inline-img-row" onMouseDown={stopFocus}>
+        <button type="button" className="js-inline-img-btn" onClick={handleAdd}>
+          <LuImagePlus /> + Add Image
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="js-img-stack">
+      {images.map((img, idx) => {
+        const key = img.id || `${scopeKey}:${idx}`
+        const src = safeImageUrl(img.url)
+        const isEditing = !src || editingIds.has(key)
+        const busy = uploadingKey === `${scopeKey}:${idx}`
+        return (
+          <div className="js-img-card" key={key}>
+            <div className="js-img-card-head">
+              {img.heading ? (
+                <div className="js-inline-img-head">{img.heading}</div>
+              ) : (
+                <div className="js-inline-img-head" style={{ opacity: 0.65 }}>Image {idx + 1}</div>
+              )}
+              <div className="js-img-card-tools" onMouseDown={stopFocus}>
+                <button type="button" onClick={() => toggleEdit(key)} title={isEditing ? 'Hide image fields' : 'Edit image details'} aria-label="Edit image">
+                  <LuPencil />
+                </button>
+                <button type="button" disabled={idx === 0} onClick={() => onMove(idx, -1)} title="Move image up" aria-label="Move image up">
+                  <LuArrowUp />
+                </button>
+                <button type="button" disabled={idx === images.length - 1} onClick={() => onMove(idx, 1)} title="Move image down" aria-label="Move image down">
+                  <LuArrowDown />
+                </button>
+                <button type="button" className="danger" onClick={() => onRemove(idx)} title="Delete image" aria-label="Delete image">
+                  <LuTrash2 />
+                </button>
+              </div>
+            </div>
+
+            {src ? (
+              <figure className="js-media js-img" style={{ marginTop: 0 }}>
+                <img src={src} alt={img.alt || img.heading || 'Image'} loading="lazy" />
+              </figure>
+            ) : (
+              <div className="js-media-empty" style={{ marginTop: 0, padding: '14px' }}>
+                Upload a local image or paste a Git / CDN image URL below.
+              </div>
+            )}
+
+            {img.caption && !isEditing && <div className="js-caption">{img.caption}</div>}
+            {img.alt && !isEditing && <div className="js-img-alt-tag">Alt: {img.alt}</div>}
+
+            {isEditing && (
+              <div className="js-img-form">
+                <div className="js-img-form-row">
+                  <input
+                    className="js-img-input"
+                    type="text"
+                    value={img.heading || ''}
+                    placeholder="Small heading / title (optional)"
+                    aria-label="Image small heading"
+                    onChange={(e) => onUpdate(idx, { heading: e.target.value })}
+                  />
+                  <input
+                    className="js-img-input"
+                    type="text"
+                    value={img.alt || ''}
+                    placeholder="Image alt text (for accessibility)"
+                    aria-label="Image alt text"
+                    onChange={(e) => onUpdate(idx, { alt: e.target.value })}
+                  />
+                </div>
+                <div className="js-img-form-row">
+                  <UrlField
+                    value={img.url || ''}
+                    placeholder="Paste Git / CDN / https:// image URL"
+                    label="Image URL"
+                    onCommit={(v) => onUpdate(idx, { url: v })}
+                  />
+                  {onUploadFile && (
+                    <label className="js-img-upload-btn" title="Upload local image (JPG, PNG, WEBP, GIF)">
+                      <LuUpload /> {busy ? 'Uploading…' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        disabled={busy}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0]
+                          e.target.value = ''
+                          if (f) onUploadFile(idx, f, `${scopeKey}:${idx}`)
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+                <div className="js-img-form-row">
+                  <input
+                    className="js-img-input"
+                    type="text"
+                    value={img.caption || ''}
+                    placeholder="Short caption below image (optional)"
+                    aria-label="Image caption"
+                    onChange={(e) => onUpdate(idx, { caption: e.target.value })}
+                  />
+                  {src && (
+                    <button type="button" className="js-img-done-btn" onClick={() => closeEdit(key)}>
+                      Done
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+      <div className="js-img-add-more" onMouseDown={stopFocus}>
+        <button type="button" className="js-inline-img-btn" style={{ opacity: 1, pointerEvents: 'auto' }} onClick={handleAdd}>
+          <LuImagePlus /> + Add Image
+        </button>
+      </div>
     </div>
   )
 }
@@ -265,6 +430,18 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
       setUploading('')
     }
   }
+  const uploadInto = async (uploadKey, file, applyUrl) => {
+    if (!file || !onUploadImage) return
+    setUploading(uploadKey)
+    try {
+      const url = await onUploadImage(file)
+      if (url) applyUrl(url)
+    } catch (err) {
+      onNotify?.(err?.message || 'Image upload failed.', 'error')
+    } finally {
+      setUploading('')
+    }
+  }
 
   /** Props bundle for one repeatable element inside a section */
   const el = (s, key, k, len, opts = {}) => {
@@ -286,6 +463,50 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
     return { drop, tools }
   }
 
+  /** Helper to render item-level ImageStackEditor (for paragraphs, list items, examples, formulas) */
+  const renderItemImages = (s, fieldKey, itemIdx, images) => (
+    <ImageStackEditor
+      images={images || []}
+      scopeKey={`${s.id}:${fieldKey}:${itemIdx}`}
+      showEmptyHoverBtn
+      onAdd={() => {
+        let added = null
+        mut(s.id, (x) => { added = addItemImage(x, fieldKey, itemIdx) })
+        return added
+      }}
+      onUpdate={(imgIdx, patch) => mut(s.id, (x) => updateItemImage(x, fieldKey, itemIdx, imgIdx, patch))}
+      onMove={(imgIdx, dir) => mut(s.id, (x) => moveItemImage(x, fieldKey, itemIdx, imgIdx, dir))}
+      onRemove={(imgIdx) => mut(s.id, (x) => removeItemImage(x, fieldKey, itemIdx, imgIdx))}
+      onUploadFile={onUploadImage ? (imgIdx, file, uKey) => uploadInto(uKey, file, (url) => mut(s.id, (x) => updateItemImage(x, fieldKey, itemIdx, imgIdx, { url }))) : undefined}
+      uploadingKey={uploading}
+    />
+  )
+
+  /** Helper to render section-bottom images (used across EVERY section type including heading_table) */
+  const renderSectionBottomImages = (s) => (
+    <ImageStackEditor
+      images={s.images || []}
+      scopeKey={`${s.id}:sec`}
+      showEmptyHoverBtn={false}
+      onAdd={() => {
+        let added = null
+        mut(s.id, (x) => { added = addSectionImage(x) })
+        return added
+      }}
+      onUpdate={(imgIdx, patch) => mut(s.id, (x) => updateSectionImage(x, imgIdx, patch))}
+      onMove={(imgIdx, dir) => mut(s.id, (x) => moveSectionImage(x, imgIdx, dir))}
+      onRemove={(imgIdx) => mut(s.id, (x) => removeSectionImage(x, imgIdx))}
+      onUploadFile={onUploadImage ? (imgIdx, file, uKey) => uploadInto(uKey, file, (url) => mut(s.id, (x) => updateSectionImage(x, imgIdx, { url }))) : undefined}
+      uploadingKey={uploading}
+    />
+  )
+
+  const addSectionImageBtn = (s) => (
+    <button type="button" onClick={() => mut(s.id, (x) => { addSectionImage(x) })}>
+      + Add Image
+    </button>
+  )
+
   const head = (s) => (
     <>
       <Ed as="span" className="js-pill" value={s.label} placeholder="Label" optional onCommit={(v) => edit(s.id, 'label', v)} />
@@ -299,7 +520,17 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
   )
 
   const body = (s) => {
-    if (s.type === 'structured_header') return head(s)
+    if (s.type === 'structured_header') {
+      return (
+        <>
+          {head(s)}
+          {renderSectionBottomImages(s)}
+          <div className="js-mini" onMouseDown={stopFocus}>
+            {addSectionImageBtn(s)}
+          </div>
+        </>
+      )
+    }
 
     if (s.type === 'heading_image') {
       const src = safeImageUrl(s.imageUrl)
@@ -329,6 +560,10 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
               <button type="button" key={l} className={layout === l ? 'on' : ''} aria-pressed={layout === l} onClick={() => edit(s.id, 'layout', l)}>{l}</button>
             ))}
           </div>
+          {renderSectionBottomImages(s)}
+          <div className="js-mini" onMouseDown={stopFocus}>
+            {addSectionImageBtn(s)}
+          </div>
         </>
       )
     }
@@ -357,6 +592,10 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
             <button type="button" className={s.showWatchLink !== false ? 'on' : ''} aria-pressed={s.showWatchLink !== false} onClick={() => edit(s.id, 'showWatchLink', s.showWatchLink === false)}>Watch link</button>
             <span className="js-num">Start (s) <input type="number" min="0" step="1" value={c.startTime} aria-label="Start time in seconds" onChange={(e) => setC({ startTime: Math.max(0, parseInt(e.target.value, 10) || 0) })} /></span>
           </div>
+          {renderSectionBottomImages(s)}
+          <div className="js-mini" onMouseDown={stopFocus}>
+            {addSectionImageBtn(s)}
+          </div>
         </>
       )
     }
@@ -373,12 +612,15 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
               <div className="js-el js-pi" key={k} {...drop}>
                 <Ed as="p" className="js-p" multiline value={p.text} placeholder="Write your paragraph…" onCommit={(v) => edit(s.id, `paragraphs.${k}.text`, v)} />
                 {showOdia(ok, p.odiaText) && <Ed className="js-odia-text" multiline odia value={p.odiaText} placeholder="Odia explanation (ଓଡ଼ିଆ ବ୍ୟାଖ୍ୟା)…" onCommit={(v) => edit(s.id, `paragraphs.${k}.odiaText`, v)} />}
+                {renderItemImages(s, 'paragraphs', k, p.images)}
                 {tools}
               </div>
             )
           })}
+          {renderSectionBottomImages(s)}
           <div className="js-mini" onMouseDown={stopFocus}>
             <button type="button" onClick={() => mut(s.id, addParagraph)}>+ Paragraph</button>
+            {addSectionImageBtn(s)}
           </div>
         </>
       )
@@ -399,14 +641,17 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
                   <div className="js-li-body">
                     <Ed value={it.text} placeholder="List item" onCommit={(v) => edit(s.id, `items.${k}.text`, v)} />
                     {showOdia(ok, it.odiaText) && <Ed className="js-odia-text" odia value={it.odiaText} placeholder="Odia explanation…" onCommit={(v) => edit(s.id, `items.${k}.odiaText`, v)} />}
+                    {renderItemImages(s, 'items', k, it.images)}
                   </div>
                   {tools}
                 </li>
               )
             })}
           </ul>
+          {renderSectionBottomImages(s)}
           <div className="js-mini" onMouseDown={stopFocus}>
             <button type="button" onClick={() => mut(s.id, listAddItem)}>+ Item</button>
+            {addSectionImageBtn(s)}
             {LIST_STYLES.map((ls) => (
               <button type="button" key={ls} onClick={() => edit(s.id, 'listStyle', ls)} style={style === ls ? { background: 'color-mix(in srgb,var(--js-accent) 22%,transparent)' } : undefined}>{ls}</button>
             ))}
@@ -450,10 +695,12 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
             </table>
           </div>
           <Ed className="js-odia-text js-odia-note" odia value={s.odiaNote} placeholder="+ Add Odia note (ଓଡ଼ିଆ ଟିପ୍ପଣୀ)" optional onCommit={(v) => edit(s.id, 'odiaNote', v)} />
+          {renderSectionBottomImages(s)}
           <div className="js-mini" onMouseDown={stopFocus}>
             <button type="button" onClick={() => mut(s.id, tableAddRow)}>+ Row</button>
             <button type="button" onClick={() => mut(s.id, tableAddCol)}>+ Column</button>
             <button type="button" onClick={() => mut(s.id, (x) => { const n = tableCols(x); if (n > 1) { x.headers = (x.headers || []).slice(0, n - 1); x.rows = (x.rows || []).map((r) => r.slice(0, n - 1)) } })} disabled={cols <= 1}>− Column</button>
+            {addSectionImageBtn(s)}
           </div>
         </>
       )
@@ -472,12 +719,15 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
                 <Ed className="js-formula" multiline value={f.expression} placeholder="Formula / equation…" onCommit={(v) => edit(s.id, `formulas.${k}.expression`, v)} />
                 <Ed className="js-expl" multiline value={f.explanation} placeholder="Explanation" optional onCommit={(v) => edit(s.id, `formulas.${k}.explanation`, v)} />
                 {showOdia(ok, f.odiaExplain) && <Ed className="js-odia-text" multiline odia value={f.odiaExplain} placeholder="Odia explanation (ଓଡ଼ିଆ ବ୍ୟାଖ୍ୟା)…" onCommit={(v) => edit(s.id, `formulas.${k}.odiaExplain`, v)} />}
+                {renderItemImages(s, 'formulas', k, f.images)}
                 {tools}
               </div>
             )
           })}
+          {renderSectionBottomImages(s)}
           <div className="js-mini" onMouseDown={stopFocus}>
             <button type="button" onClick={() => mut(s.id, addFormula)}>+ Formula</button>
+            {addSectionImageBtn(s)}
           </div>
         </>
       )
@@ -496,12 +746,15 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
               <Ed className="js-ex-title" value={x.title} placeholder="Example title" optional onCommit={(v) => edit(s.id, `examples.${k}.title`, v)} />
               <Ed className="js-ex-body" multiline value={x.detail} placeholder="Describe the example…" onCommit={(v) => edit(s.id, `examples.${k}.detail`, v)} />
               {showOdia(ok, x.odiaExplain) && <Ed className="js-odia-text" multiline odia value={x.odiaExplain} placeholder="Odia explanation (ଓଡ଼ିଆ ବ୍ୟାଖ୍ୟା)…" onCommit={(v) => edit(s.id, `examples.${k}.odiaExplain`, v)} />}
+              {renderItemImages(s, 'examples', k, x.images)}
               {tools}
             </div>
           )
         })}
+        {renderSectionBottomImages(s)}
         <div className="js-mini" onMouseDown={stopFocus}>
           <button type="button" onClick={() => mut(s.id, addExample)}>+ Example</button>
+          {addSectionImageBtn(s)}
         </div>
       </>
     )

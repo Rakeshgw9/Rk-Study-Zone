@@ -197,10 +197,48 @@ export function safeImageUrl(u) {
 }
 const cellText = (p) => (typeof p === 'string' ? p : p && typeof p === 'object' ? str(p.text) : str(p))
 
-/** string | { text, odiaText } → { text, odiaText } (never throws) */
+/** Image attachment object → normalised { id, url, heading, alt, caption } (never throws). */
+export const toStudioImage = (img) => (img && typeof img === 'object' && !Array.isArray(img)
+  ? {
+      id: str(img.id),
+      url: str(img.url ?? img.imageUrl ?? img.src).trim(),
+      heading: str(img.heading ?? img.title),
+      alt: str(img.alt),
+      caption: str(img.caption),
+    }
+  : { id: '', url: str(img).trim(), heading: '', alt: '', caption: '' })
+
+export function normalizeImages(list) {
+  return Array.isArray(list) ? ensureIds(list.map(toStudioImage), 'img') : []
+}
+
+export function compactImages(list) {
+  if (!Array.isArray(list) || !list.length) return []
+  return list.map((img) => {
+    const x = toStudioImage(img)
+    return {
+      ...(x.id ? { id: x.id } : {}),
+      url: x.url,
+      ...(x.heading ? { heading: x.heading } : {}),
+      ...(x.alt ? { alt: x.alt } : {}),
+      ...(x.caption ? { caption: x.caption } : {}),
+    }
+  })
+}
+
+export const newStudioImage = (patch = {}) => ({
+  id: newItemId(),
+  url: '',
+  heading: '',
+  alt: '',
+  caption: '',
+  ...patch,
+})
+
+/** string | { text, odiaText, images? } → { text, odiaText, images } (never throws) */
 export const toItem = (p) => (p && typeof p === 'object' && !Array.isArray(p)
-  ? { text: str(p.text ?? p.content ?? p.value), odiaText: str(p.odiaText ?? p.odia) }
-  : { text: str(p), odiaText: '' })
+  ? { text: str(p.text ?? p.content ?? p.value), odiaText: str(p.odiaText ?? p.odia), images: normalizeImages(p.images) }
+  : { text: str(p), odiaText: '', images: [] })
 
 function ensureIds(list, prefix) {
   const seen = new Set()
@@ -212,11 +250,11 @@ function ensureIds(list, prefix) {
   })
 }
 const toFormula = (p) => (p && typeof p === 'object' && !Array.isArray(p)
-  ? { id: str(p.id), expression: str(p.expression ?? p.formulaOrQuote ?? p.formula ?? p.text), explanation: str(p.explanation), odiaExplain: str(p.odiaExplain ?? p.odiaText) }
-  : { id: '', expression: str(p), explanation: '', odiaExplain: '' })
+  ? { id: str(p.id), expression: str(p.expression ?? p.formulaOrQuote ?? p.formula ?? p.text), explanation: str(p.explanation), odiaExplain: str(p.odiaExplain ?? p.odiaText), images: normalizeImages(p.images) }
+  : { id: '', expression: str(p), explanation: '', odiaExplain: '', images: [] })
 const toExample = (p) => (p && typeof p === 'object' && !Array.isArray(p)
-  ? { id: str(p.id), title: str(p.title ?? p.heading), detail: str(p.detail ?? p.exampleText ?? p.text), odiaExplain: str(p.odiaExplain ?? p.odiaText) }
-  : { id: '', title: '', detail: str(p), odiaExplain: '' })
+  ? { id: str(p.id), title: str(p.title ?? p.heading), detail: str(p.detail ?? p.exampleText ?? p.text), odiaExplain: str(p.odiaExplain ?? p.odiaText), images: normalizeImages(p.images) }
+  : { id: '', title: '', detail: str(p), odiaExplain: '', images: [] })
 
 function inferType(s) {
   if (s.youtubeUrl) return 'heading_youtube'
@@ -264,6 +302,7 @@ export function normalizeSection(s, i = 0) {
     else if (f.kind === 'string[]') out[f.key] = Array.isArray(v) ? v.map(cellText) : []
     else if (f.kind === 'string[][]') out[f.key] = Array.isArray(v) ? v.map((r) => (Array.isArray(r) ? r.map(cellText) : [cellText(r)])) : []
   })
+  out.images = normalizeImages(src.images)
   return out
 }
 
@@ -278,12 +317,24 @@ export function compactSections(sections = []) {
       if (f.kind === 'theme' || v === undefined) return
       if (f.optional && f.odia && (v === '' || v === null)) return
       if (f.dropEmpty && (v === '' || v === null)) return
-      if (f.kind === 'items') out[f.key] = v.map((it) => (it.odiaText ? { text: it.text, odiaText: it.odiaText } : it.text))
-      else if (f.kind === 'formulas') out[f.key] = v.map((x) => ({ id: x.id, expression: x.expression, ...(x.explanation ? { explanation: x.explanation } : {}), ...(x.odiaExplain ? { odiaExplain: x.odiaExplain } : {}) }))
-      else if (f.kind === 'examples') out[f.key] = v.map((x) => ({ id: x.id, ...(x.title ? { title: x.title } : {}), detail: x.detail, ...(x.odiaExplain ? { odiaExplain: x.odiaExplain } : {}) }))
+      if (f.kind === 'items') out[f.key] = v.map((it) => {
+        const imgs = compactImages(it.images)
+        if (!it.odiaText && !imgs.length) return it.text
+        return { text: it.text, ...(it.odiaText ? { odiaText: it.odiaText } : {}), ...(imgs.length ? { images: imgs } : {}) }
+      })
+      else if (f.kind === 'formulas') out[f.key] = v.map((x) => {
+        const imgs = compactImages(x.images)
+        return { id: x.id, expression: x.expression, ...(x.explanation ? { explanation: x.explanation } : {}), ...(x.odiaExplain ? { odiaExplain: x.odiaExplain } : {}), ...(imgs.length ? { images: imgs } : {}) }
+      })
+      else if (f.kind === 'examples') out[f.key] = v.map((x) => {
+        const imgs = compactImages(x.images)
+        return { id: x.id, ...(x.title ? { title: x.title } : {}), detail: x.detail, ...(x.odiaExplain ? { odiaExplain: x.odiaExplain } : {}), ...(imgs.length ? { images: imgs } : {}) }
+      })
       else if (f.kind === 'controls') out[f.key] = normalizeControls(v)
       else out[f.key] = v
     })
+    const secImgs = compactImages(s.images)
+    if (secImgs.length) out.images = secImgs
     return out
   })
 }
@@ -401,11 +452,15 @@ export function buildStudioJson(base, sections, theme, wasStudio = true, textSty
 }
 
 /* ------------------------------------------------------------ mutations */
+const refreshImgs = (imgs) => (Array.isArray(imgs) ? imgs.map((im) => ({ ...im, id: newItemId() })) : imgs)
 export function duplicateSection(list, i) {
   if (!list[i]) return list
   const copy = cloneDeep(list[i]); copy.id = newSectionId()
-  if (copy.formulas) copy.formulas = copy.formulas.map((x) => ({ ...x, id: newItemId() }))
-  if (copy.examples) copy.examples = copy.examples.map((x) => ({ ...x, id: newItemId() }))
+  if (copy.images) copy.images = refreshImgs(copy.images)
+  if (copy.paragraphs) copy.paragraphs = copy.paragraphs.map((x) => (x && typeof x === 'object' ? { ...x, images: refreshImgs(x.images) } : x))
+  if (copy.items) copy.items = copy.items.map((x) => (x && typeof x === 'object' ? { ...x, images: refreshImgs(x.images) } : x))
+  if (copy.formulas) copy.formulas = copy.formulas.map((x) => ({ ...x, id: newItemId(), images: refreshImgs(x.images) }))
+  if (copy.examples) copy.examples = copy.examples.map((x) => ({ ...x, id: newItemId(), images: refreshImgs(x.images) }))
   return [...list.slice(0, i + 1), copy, ...list.slice(i + 1)]
 }
 export function moveSection(list, i, dir) {
@@ -472,10 +527,70 @@ export function dupItem(s, key, k) { const a = [...(s[key] || [])]; if (k < 0 ||
 export function moveItem(s, key, k, dir) { const a = [...(s[key] || [])]; const j = k + dir; if (k < 0 || k >= a.length || j < 0 || j >= a.length) return; [a[k], a[j]] = [a[j], a[k]]; s[key] = a }
 export function moveItemTo(s, key, from, to) { s[key] = arrayMove(s[key] || [], from, to) }
 export function removeItem(s, key, k) { s[key] = (s[key] || []).filter((_, n) => n !== k) }
-export const addParagraph = (s) => { s.paragraphs = [...(s.paragraphs || []), { text: 'New paragraph', odiaText: '' }] }
-export const addFormula = (s) => { s.formulas = [...(s.formulas || []), { id: newItemId(), expression: 'New formula', explanation: '', odiaExplain: '' }] }
-export const addExample = (s) => { s.examples = [...(s.examples || []), { id: newItemId(), title: '', detail: 'New example', odiaExplain: '' }] }
-export const listAddItem = (s) => { s.items = [...(s.items || []), { text: 'New point', odiaText: '' }] }
+export const addParagraph = (s) => { s.paragraphs = [...(s.paragraphs || []), { text: 'New paragraph', odiaText: '', images: [] }] }
+export const addFormula = (s) => { s.formulas = [...(s.formulas || []), { id: newItemId(), expression: 'New formula', explanation: '', odiaExplain: '', images: [] }] }
+export const addExample = (s) => { s.examples = [...(s.examples || []), { id: newItemId(), title: '', detail: 'New example', odiaExplain: '', images: [] }] }
+export const listAddItem = (s) => { s.items = [...(s.items || []), { text: 'New point', odiaText: '', images: [] }] }
+
+/* ---- image attachment helpers (section-level bottom & item-level) ---- */
+export function addSectionImage(s, patch = {}) {
+  const img = newStudioImage(patch)
+  s.images = [...(s.images || []), img]
+  return img
+}
+export function updateSectionImage(s, imgIdx, patch) {
+  const imgs = [...(s.images || [])]
+  if (!imgs[imgIdx]) return
+  imgs[imgIdx] = { ...imgs[imgIdx], ...patch }
+  s.images = imgs
+}
+export function moveSectionImage(s, imgIdx, dir) {
+  const imgs = [...(s.images || [])]
+  const j = imgIdx + dir
+  if (imgIdx < 0 || imgIdx >= imgs.length || j < 0 || j >= imgs.length) return
+  ;[imgs[imgIdx], imgs[j]] = [imgs[j], imgs[imgIdx]]
+  s.images = imgs
+}
+export function removeSectionImage(s, imgIdx) {
+  s.images = (s.images || []).filter((_, n) => n !== imgIdx)
+}
+export function addItemImage(s, fieldKey, itemIdx, patch = {}) {
+  if (!['paragraphs', 'items', 'examples', 'formulas'].includes(fieldKey)) return null
+  const arr = [...(s[fieldKey] || [])]
+  const cur = arr[itemIdx]
+  if (!cur || typeof cur !== 'object') return null
+  const img = newStudioImage(patch)
+  arr[itemIdx] = { ...cur, images: [...(cur.images || []), img] }
+  s[fieldKey] = arr
+  return img
+}
+export function updateItemImage(s, fieldKey, itemIdx, imgIdx, patch) {
+  const arr = [...(s[fieldKey] || [])]
+  const cur = arr[itemIdx]
+  if (!cur || !Array.isArray(cur.images) || !cur.images[imgIdx]) return
+  const imgs = [...cur.images]
+  imgs[imgIdx] = { ...imgs[imgIdx], ...patch }
+  arr[itemIdx] = { ...cur, images: imgs }
+  s[fieldKey] = arr
+}
+export function moveItemImage(s, fieldKey, itemIdx, imgIdx, dir) {
+  const arr = [...(s[fieldKey] || [])]
+  const cur = arr[itemIdx]
+  if (!cur || !Array.isArray(cur.images)) return
+  const imgs = [...cur.images]
+  const j = imgIdx + dir
+  if (imgIdx < 0 || imgIdx >= imgs.length || j < 0 || j >= imgs.length) return
+  ;[imgs[imgIdx], imgs[j]] = [imgs[j], imgs[imgIdx]]
+  arr[itemIdx] = { ...cur, images: imgs }
+  s[fieldKey] = arr
+}
+export function removeItemImage(s, fieldKey, itemIdx, imgIdx) {
+  const arr = [...(s[fieldKey] || [])]
+  const cur = arr[itemIdx]
+  if (!cur || !Array.isArray(cur.images)) return
+  arr[itemIdx] = { ...cur, images: cur.images.filter((_, n) => n !== imgIdx) }
+  s[fieldKey] = arr
+}
 export const listRemoveItem = (s, k) => { s.items = (s.items || []).filter((_, n) => n !== k) }
 export const tableCols = (s) => Math.max((s.headers || []).length, ...(s.rows || []).map((r) => r.length), 1)
 export function tableAddRow(s) { s.rows = [...(s.rows || []), Array.from({ length: tableCols(s) }, () => 'New cell')] }
@@ -618,17 +733,25 @@ export function fmt(t = '') {
 export function renderStudioHtml(sections = [], theme = DEFAULT_THEME, opts = {}) {
   const opt = (cls, v, tag = 'div') => (v ? `<${tag} class="${cls}">${fmt(v)}</${tag}>` : '')
   const od = (v, cls = '') => opt(`js-odia-text ${cls}`.trim(), v)
+  const renderImgs = (list) => {
+    const valid = (Array.isArray(list) ? list : []).map((im) => ({ im, src: safeImageUrl(im?.url) })).filter((x) => x.src)
+    if (!valid.length) return ''
+    return `<div class="js-inline-images">${valid.map(({ im, src }) => {
+      const altText = String(im.alt || im.heading || im.caption || 'Image').replace(/<[^>]*>/g, '').trim() || 'Image'
+      return `<div class="js-inline-img-item">${opt('js-inline-img-head', im.heading)}<figure class="js-media js-img"><img src="${escAttr(src)}" alt="${escAttr(altText)}" loading="lazy"></figure>${opt('js-caption', im.caption)}</div>`
+    }).join('')}</div>`
+  }
   const head = (s) => `${opt('js-pill', s.label, 'span')}${s.heading ? `<h3 class="js-h">${fmt(s.heading)}</h3>` : ''}${od(s.odiaHeading, 'js-odia-h')}${opt('js-sub', s.subHeading)}${od(s.odiaSubHeading)}`
   const body = sections.map((s) => {
     let inner = ''
     if (s.type === 'structured_header') inner = head(s)
-    else if (s.type === 'heading_paragraph') inner = `${head(s)}${(s.paragraphs || []).map((p) => `<div class="js-pi"><p class="js-p">${fmt(p.text)}</p>${od(p.odiaText)}</div>`).join('')}`
-    else if (s.type === 'heading_list') inner = `${head(s)}<ul class="js-list ${LIST_STYLES.includes(s.listStyle) ? s.listStyle : 'bullet'}">${(s.items || []).map((x) => `<li><div class="js-li-body"><div>${fmt(x.text)}</div>${od(x.odiaText)}</div></li>`).join('')}</ul>`
+    else if (s.type === 'heading_paragraph') inner = `${head(s)}${(s.paragraphs || []).map((p) => `<div class="js-pi"><p class="js-p">${fmt(p.text)}</p>${od(p.odiaText)}${renderImgs(p.images)}</div>`).join('')}`
+    else if (s.type === 'heading_list') inner = `${head(s)}<ul class="js-list ${LIST_STYLES.includes(s.listStyle) ? s.listStyle : 'bullet'}">${(s.items || []).map((x) => `<li><div class="js-li-body"><div>${fmt(x.text)}</div>${od(x.odiaText)}${renderImgs(x.images)}</div></li>`).join('')}</ul>`
     else if (s.type === 'heading_table') {
       const cols = tableCols(s)
       const pad = (r) => Array.from({ length: cols }, (_, c) => r[c] ?? '')
       inner = `${head(s)}<div class="js-table-scroll js-table-wrap table-responsive"><table class="js-table">${(s.headers || []).length ? `<thead><tr>${pad(s.headers).map((h) => `<th>${fmt(h)}</th>`).join('')}</tr></thead>` : ''}<tbody>${(s.rows || []).map((r) => `<tr>${pad(r).map((c) => `<td>${fmt(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${od(s.odiaNote, 'js-odia-note')}`
-    } else if (s.type === 'callout_formula') inner = `${head(s)}${(s.formulas || []).map((x) => `<div class="js-fbox"><div class="js-formula">${fmt(x.expression)}</div>${opt('js-expl', x.explanation)}${od(x.odiaExplain)}</div>`).join('')}`
+    } else if (s.type === 'callout_formula') inner = `${head(s)}${(s.formulas || []).map((x) => `<div class="js-fbox"><div class="js-formula">${fmt(x.expression)}</div>${opt('js-expl', x.explanation)}${od(x.odiaExplain)}${renderImgs(x.images)}</div>`).join('')}`
     else if (s.type === 'heading_image') {
       const src = safeImageUrl(s.imageUrl); const layout = IMAGE_LAYOUTS.includes(s.layout) ? s.layout : 'top'
       const fig = src ? `<figure class="js-media js-img"><img src="${escAttr(src)}" alt="${escAttr(String(s.heading || s.caption || 'Image').replace(/<[^>]*>/g, ''))}" loading="lazy"></figure>` : ''
@@ -639,9 +762,9 @@ export function renderStudioHtml(sections = [], theme = DEFAULT_THEME, opts = {}
       const player = embed ? `<div class="js-media js-yt"><iframe src="${escAttr(embed)}" title="${escAttr(String(s.heading || 'YouTube video').replace(/<[^>]*>/g, ''))}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><div class="js-yt-print">▶ Video: <a href="${escAttr(watch)}">${escapeText(watch)}</a></div>` : ''
       const link = embed && s.showWatchLink !== false ? `<div class="js-yt-link"><a href="${escAttr(watch)}" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a></div>` : ''
       inner = `${head(s)}${player}${opt('js-caption', s.caption)}${od(s.odiaCaption)}${link}`
-    } else if (s.type === 'heading_example') inner = `${head(s)}${(s.examples || []).map((x) => `<div class="js-ex-item">${opt('js-ex-title', x.title)}<div class="js-ex-body">${fmt(x.detail)}</div>${od(x.odiaExplain)}</div>`).join('')}`
+    } else if (s.type === 'heading_example') inner = `${head(s)}${(s.examples || []).map((x) => `<div class="js-ex-item">${opt('js-ex-title', x.title)}<div class="js-ex-body">${fmt(x.detail)}</div>${od(x.odiaExplain)}${renderImgs(x.images)}</div>`).join('')}`
     const thm = isThemeId(s.theme) ? ` data-theme="${s.theme}"` : ''
-    return `<section class="js-sec js-${s.type.replace(/_/g, '-')}" id="${escAttr(opts.idPrefix || 'js-sec-')}${escAttr(s.id)}"${thm}>${inner}</section>`
+    return `<section class="js-sec js-${s.type.replace(/_/g, '-')}" id="${escAttr(opts.idPrefix || 'js-sec-')}${escAttr(s.id)}"${thm}>${inner}${renderImgs(s.images)}</section>`
   }).join('')
   const vars = varsToCss(textStyleVars(opts.textStyle))
   return `<div class="json-artboard-content${opts.full === false ? '' : ' in-frame'}" data-theme="${themeById(theme).id}"${vars ? ` style="${escAttr(vars)}"` : ''}>${body}</div>`

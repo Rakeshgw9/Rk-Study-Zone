@@ -5,6 +5,28 @@ import { IMAGE_LAYOUTS, LIST_STYLES, SECTION_SCHEMA, fmt, safeImageUrl, safeScop
  * the student lesson page and the PDF all look identical. Every text goes through fmt() (sanitised HTML only). */
 const Html = ({ as: Tag = 'div', v, className }) => (v ? <Tag className={className} dangerouslySetInnerHTML={{ __html: fmt(v) }} /> : null)
 const Odia = ({ v, className = '' }) => (v ? <div className={`js-odia-text ${className}`.trim()} lang="or" dangerouslySetInnerHTML={{ __html: fmt(v) }} /> : null)
+const plain = (v) => String(v || '').replace(/<[^>]*>/g, '').trim()
+
+/** Renders one or more attached images (under a paragraph, list item, example, formula, or bottom of any section). */
+export function InlineImages({ images }) {
+  const valid = (Array.isArray(images) ? images : [])
+    .map((im) => ({ im, src: safeImageUrl(im?.url) }))
+    .filter((x) => x.src)
+  if (!valid.length) return null
+  return (
+    <div className="js-inline-images">
+      {valid.map(({ im, src }, idx) => (
+        <div className="js-inline-img-item" key={im.id || idx}>
+          <Html className="js-inline-img-head" v={im.heading} />
+          <figure className="js-media js-img">
+            <img src={src} alt={plain(im.alt || im.heading || im.caption) || 'Image'} loading="lazy" />
+          </figure>
+          <Html className="js-caption" v={im.caption} />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function Head({ s }) {
   return (
@@ -17,8 +39,6 @@ function Head({ s }) {
     </>
   )
 }
-
-const plain = (v) => String(v || '').replace(/<[^>]*>/g, '').trim()
 
 /** heading_image: URL image with caption; layout top | split-left | split-right (stacks on phones). */
 export function ImageBody({ s }) {
@@ -61,6 +81,7 @@ function Body({ s }) {
       <div className="js-pi" key={k}>
         <Html as="p" className="js-p" v={p.text} />
         <Odia v={p.odiaText} />
+        <InlineImages images={p.images} />
       </div>
     ))
   if (s.type === 'heading_list') {
@@ -72,6 +93,7 @@ function Body({ s }) {
             <div className="js-li-body">
               <div dangerouslySetInnerHTML={{ __html: fmt(it.text) }} />
               <Odia v={it.odiaText} />
+              <InlineImages images={it.images} />
             </div>
           </li>
         ))}
@@ -107,6 +129,7 @@ function Body({ s }) {
         <div className="js-formula" dangerouslySetInnerHTML={{ __html: fmt(x.expression) }} />
         <Html className="js-expl" v={x.explanation} />
         <Odia v={x.odiaExplain} />
+        <InlineImages images={x.images} />
       </div>
     ))
   if (s.type === 'heading_example')
@@ -115,6 +138,7 @@ function Body({ s }) {
         <Html className="js-ex-title" v={x.title} />
         <div className="js-ex-body" dangerouslySetInnerHTML={{ __html: fmt(x.detail) }} />
         <Odia v={x.odiaExplain} />
+        <InlineImages images={x.images} />
       </div>
     ))
   return null
@@ -141,6 +165,7 @@ export default function StudioView({ sections, theme, textStyle, blockId = 'x', 
             <section key={s.id} id={studioSecId(blockId, s.id)} className={`js-sec js-${s.type.replace(/_/g, '-')}${notes ? ' js-has-note' : ''}`} data-theme={s.theme || undefined} aria-label={SECTION_SCHEMA[s.type]?.label}>
               <Head s={s} />
               <Body s={s} />
+              <InlineImages images={s.images} />
               {notes && (
                 <button type="button" className={`blk-note-btn js-note-btn ${has ? 'has' : ''}`} onClick={() => onNote({ key: s.id, title: sectionTitle(s).slice(0, 90) })} title={has ? 'Edit your note' : 'Add a note'}>
                   <LuPencil /> <span>{has ? 'Note saved' : 'Add note'}</span>
