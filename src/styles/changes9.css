@@ -407,16 +407,29 @@
   opacity: 1;
 }
 
+
+
 .tree-active-pill {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(34, 211, 238, 0.22);
-  color: #67e8f9;
-  border: 1px solid rgba(34, 211, 238, 0.45);
-  flex-shrink: 0;
+display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 999px;
+    background: rgb(0 106 57);
+    color: #ffffff;
+    border: 1px solid rgb(0 193 86 / 45%);
+    flex-shrink: 0;
+    position: absolute;
+    right: 12px;
+    font-size: 10px;
+}
+.tree-active-pill svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.8;
+  display: block;
 }
 
 .ws-editing-badge {

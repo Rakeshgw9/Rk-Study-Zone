@@ -4,6 +4,7 @@ import { fromEditable } from '../../lib/richText'
 import { scrollToStudioSection } from '../../lib/jsonStudioDom'
 import { handleProps, targetProps } from '../../lib/dnd'
 import { useRichText } from '../ui/RichText'
+import { useTheme } from '../../context/ThemeContext'
 import {
   IMAGE_LAYOUTS,
   LIST_STYLES,
@@ -34,6 +35,7 @@ import {
   removeItemImage,
   removeSection,
   removeSectionImage,
+  resolveEffectiveTheme,
   safeImageUrl,
   setSectionValue,
   tableAddCol,
@@ -354,6 +356,8 @@ function ImageStackEditor({
  * Every operation resolves by section id and reads the latest list from a ref, so a debounced edit can never land on the wrong section.
  */
 export default function JsonStudioCanvas({ sections, theme, textStyle, onChange, maxHeight, className = '', activeId = null, onActivate, onUploadImage, onNotify }) {
+  const { theme: appTheme } = useTheme()
+  const effTheme = resolveEffectiveTheme(theme, appTheme)
   const latest = useRef(sections)
   latest.current = sections
   const [odiaOpen, setOdiaOpen] = useState(() => new Set())
@@ -764,7 +768,7 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
     <div
       ref={rootRef}
       className={`json-artboard-content js-editing ${className}`}
-      data-theme={theme}
+      data-theme={effTheme}
       style={{ ...textStyleVars(textStyle), ...(maxHeight ? { maxHeight } : {}) }}
       aria-label="JSON content artboard"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onActivate?.(null) }}
@@ -785,7 +789,7 @@ export default function JsonStudioCanvas({ sections, theme, textStyle, onChange,
           id={`js-sec-${s.id}`}
           className={`js-sec js-edit-sec js-${s.type.replace(/_/g, '-')}${activeId === s.id ? ' js-active' : ''}`}
           data-type={s.type}
-          data-theme={s.theme || undefined}
+          data-theme={s.theme ? resolveEffectiveTheme(s.theme, appTheme) : undefined}
           aria-label={SECTION_SCHEMA[s.type]?.label}
           onMouseDownCapture={() => { if (activeId !== s.id) onActivate?.(s.id) }}
           onFocusCapture={() => { if (activeId !== s.id) onActivate?.(s.id) }}

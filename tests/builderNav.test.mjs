@@ -8,7 +8,10 @@ import {
   isChapterOpen,
   isSameTarget,
   isUnitOpen,
+  loadLastEdited,
   normalizeTarget,
+  saveLastEdited,
+  shouldConfirmSwitch,
 } from '../src/lib/builderNav.js'
 
 test('normalizeTarget strips orphan descendants when an ancestor is missing', () => {
@@ -131,4 +134,114 @@ test('SELECT honors explicit scroll flag and source=tree while keeping page/acti
   })
   assert.equal(s2.scroll.n, 1)
   assert.equal(s2.scroll.to.blockId, 'b2')
+})
+
+test('saveLastEdited & loadLastEdited persist unitId and chapterId per portalId and validate against content', () => {
+  const mem = new Map()
+  const storage = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+  }
+  const content = {
+    units: [
+      { id: 'u1', chapters: [{ id: 'ch1' }, { id: 'ch2' }] },
+      { id: 'u2', chapters: [{ id: 'ch3' }] },
+    ],
+  }
+
+  assert.equal(saveLastEdited('portal-a', { unitId: 'u2', chapterId: 'ch3' }, storage), true)
+  assert.deepEqual(loadLastEdited('portal-a', content, storage), { unitId: 'u2', chapterId: 'ch3' })
+  assert.equal(loadLastEdited('portal-b', content, storage), null)
+
+  // If saved chapter was deleted, still restores valid unitId with null chapterId
+  assert.equal(saveLastEdited('portal-a', { unitId: 'u1', chapterId: 'deleted-ch' }, storage), true)
+  assert.deepEqual(loadLastEdited('portal-a', content, storage), { unitId: 'u1', chapterId: null })
+
+  // If saved unit was deleted, returns null
+  assert.equal(saveLastEdited('portal-a', { unitId: 'deleted-u', chapterId: 'ch1' }, storage), true)
+  assert.equal(loadLastEdited('portal-a', content, storage), null)
+})
+
+test('shouldConfirmSwitch enforces Unit & Chapter Edit Lock on user navigation switches', () => {
+  // Switching from chapter 1 to chapter 2 in same unit -> confirm
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1', chapterId: 'ch1' }, { unitId: 'u1', chapterId: 'ch2' }, 'tree', true),
+    true
+  )
+  // Switching from chapter 1 to unit 2 -> confirm
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1', chapterId: 'ch1' }, { unitId: 'u2' }, 'page', true),
+    true
+  )
+  // Exiting chapter 1 back to unit 1 overview -> confirm
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1', chapterId: 'ch1' }, { unitId: 'u1' }, 'tree', true),
+    true
+  )
+  // Switching from unit 1 overview to unit 2 -> confirm
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1' }, { unitId: 'u2' }, 'page', true),
+    true
+  )
+  // Clicking a block or section inside the SAME chapter -> no confirm
+  assert.equal(
+    shouldConfirmSwitch(
+      { unitId: 'u1', chapterId: 'ch1', blockId: 'b1' },
+      { unitId: 'u1', chapterId: 'ch1', blockId: 'b2', sectionId: 's1' },
+      'page',
+      true
+    ),
+    false
+  )
+  // Drilling from unit 1 overview into chapter 1 of unit 1 -> no confirm
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1' }, { unitId: 'u1', chapterId: 'ch1' }, 'page', true),
+    false
+  )
+  // Non-user sources (spy, init, action) or unlocked state -> never confirm
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1', chapterId: 'ch1' }, { unitId: 'u2', chapterId: 'ch3' }, 'spy', true),
+    false
+  )
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1', chapterId: 'ch1' }, { unitId: 'u2', chapterId: 'ch3' }, 'init', true),
+    false
+  )
+  assert.equal(
+    shouldConfirmSwitch({ unitId: 'u1', chapterId: 'ch1' }, { unitId: 'u2', chapterId: 'ch3' }, 'tree', false),
+    false
+  )
+})
+
+test('exclusive accordion: opening a unit closes other units, and opening/switching a chapter closes other chapters', () => {
+  let s = builderNavReducer(INITIAL_NAV_STATE, {
+    type: 'SELECT',
+    target: { unitId: 'u1', chapterId: 'ch1', blockId: 'b1' },
+    source: 'init',
+  })
+  assert.equal(isUnitOpen(s.treeOpen, s.target, 'u1'), true)
+  assert.equal(isUnitOpen(s.treeOpen, s.target, 'u2'), false)
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch1'), true)
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch2'), false)
+
+  // Manually expand Unit 2 -> Unit 2 opens and Unit 1 automatically closes
+  s = builderNavReducer(s, { type: 'TOGGLE_OPEN', kind: 'unit', id: 'u2' })
+  assert.equal(isUnitOpen(s.treeOpen, s.target, 'u2'), true)
+  assert.equal(isUnitOpen(s.treeOpen, s.target, 'u1'), false)
+
+  // Manually expand Chapter 2 -> Chapter 2 opens and Chapter 1 automatically closes
+  s = builderNavReducer(s, { type: 'TOGGLE_OPEN', kind: 'chapter', id: 'ch2' })
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch2'), true)
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch1'), false)
+
+  // Switching target to Chapter 3 in Unit 2 -> only Unit 2 and Chapter 3 stay open
+  s = builderNavReducer(s, {
+    type: 'TREE_CLICK',
+    target: { unitId: 'u2', chapterId: 'ch3' },
+  })
+  assert.equal(isUnitOpen(s.treeOpen, s.target, 'u2'), true)
+  assert.equal(isUnitOpen(s.treeOpen, s.target, 'u1'), false)
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch3'), true)
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch2'), false)
+  assert.equal(isChapterOpen(s.treeOpen, s.target, 'ch1'), false)
 })

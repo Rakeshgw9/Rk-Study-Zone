@@ -487,6 +487,27 @@ export default function McqExamModal({
                       })}
                     </div>
 
+                    {/* Mobile-only non-sticky full-width Next / Submit button */}
+                    <div className="mcq-mobile-inline-next d-md-none">
+                      {isLast ? (
+                        <button
+                          type="button"
+                          className="btn mcq-submit-green-btn w-100 mcq-inline-next-btn"
+                          onClick={() => setConfirmSubmit(true)}
+                        >
+                          <LuCheck /> <span>Submit Exam</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn ui-btn ui-btn-primary w-100 mcq-inline-next-btn"
+                          onClick={() => setIdx((i) => i + 1)}
+                        >
+                          <span>Next</span> <LuArrowRight />
+                        </button>
+                      )}
+                    </div>
+
                     <div className="mcq-review-check d-none d-md-block">
                       <label className="d-inline-flex align-items-center gap-2">
                         <input
@@ -534,7 +555,7 @@ export default function McqExamModal({
                     {isLast ? (
                       <button
                         type="button"
-                        className="btn mcq-submit-green-btn mcq-foot-btn"
+                        className="btn mcq-submit-green-btn mcq-foot-btn d-none d-md-inline-flex"
                         onClick={() => setConfirmSubmit(true)}
                       >
                         <LuCheck /> <span className="mcq-foot-label">Submit Exam</span>
@@ -542,7 +563,7 @@ export default function McqExamModal({
                     ) : (
                       <button
                         type="button"
-                        className="btn ui-btn ui-btn-primary mcq-foot-btn"
+                        className="btn ui-btn ui-btn-primary mcq-foot-btn d-none d-md-inline-flex"
                         onClick={() => setIdx((i) => i + 1)}
                       >
                         <span className="mcq-foot-label">Next</span> <LuArrowRight />

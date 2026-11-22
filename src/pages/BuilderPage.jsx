@@ -10,6 +10,7 @@ import {
   LuLayers,
   LuListTree,
   LuLoaderCircle,
+  LuLock,
   LuLogOut,
   LuMoon,
   LuPanelLeft,
@@ -38,14 +39,14 @@ import { validateTable } from '../lib/table'
 import { ChapterActions, SetupGuide, UnitActions } from '../components/builder/SidePanels'
 import StructureTree from '../components/builder/StructureTree'
 import UnitModal from '../components/builder/UnitModal'
-import { ChapterBar, ChapterView, Crumbs, UnitView, Welcome } from '../components/builder/Workspace'
+import { ChapterBar, ChapterView, Crumbs, MobileUnitsAccordion, UnitView, Welcome } from '../components/builder/Workspace'
 import { useConfirm } from '../components/ui/Confirm'
 import GoToTop from '../components/ui/GoToTop'
 import { useAuth } from '../context/AuthContext'
 import { usePrefs } from '../context/PrefsContext'
 import { useTheme } from '../context/ThemeContext'
 import { BLOCK_TYPES, contentReducer, findBlock, findChapter, newBlock, validateContent } from '../lib/content'
-import { builderNavReducer, INITIAL_NAV_STATE, isSameTarget, normalizeTarget } from '../lib/builderNav'
+import { builderNavReducer, INITIAL_NAV_STATE, isSameTarget, loadLastEdited, normalizeTarget, saveLastEdited, shouldConfirmSwitch } from '../lib/builderNav'
 import { clone, timeAgo, uid } from '../lib/id'
 import { validateLessonJson } from '../lib/jsonLesson'
 import { duplicateSectionById, editStudioJson, moveSectionIndex, removeSectionById, studioFromJson, studioSectionList, sectionTitle } from '../lib/jsonStudio'
@@ -120,6 +121,13 @@ export default function BuilderPage() {
   const [version, setVersion] = useState(0)
   const [modal, setModal] = useState({})
   const [pane, setPane] = useState('workspace')
+  const paneRef = useRef(pane)
+  paneRef.current = pane
+  // Change 2: Unit & Chapter Edit Lock (locked by default whenever editing a unit or chapter)
+  const [editLocked] = useState(true)
+  // Change 1: Mobile all-units collapsible accordion (chapters hidden/collapsed by default unless restored)
+  const [mobileExpandedUnits, setMobileExpandedUnits] = useState({})
+  const restoredLastEditedRef = useRef(false)
   const [, setPublishErrors] = useState(null)
   const [, setPublishLinks] = useState(false)
   const [insertAt, setInsertAt] = useState(null)
@@ -163,8 +171,18 @@ export default function BuilderPage() {
         setContent(c)
         contentRef.current = c
         setSave({ status: 'saved', at: p.draftUpdatedAt || null })
-        if (c.units[0]) {
+        const restored = loadLastEdited(portalId, c)
+        if (restored?.unitId) {
+          restoredLastEditedRef.current = true
+          dispatchNav({ type: 'SELECT', target: restored, source: 'init' })
+          setMobileExpandedUnits({ [restored.unitId]: true })
+        } else if (c.units[0]) {
+          restoredLastEditedRef.current = false
           dispatchNav({ type: 'SELECT', target: { unitId: c.units[0].id }, source: 'init' })
+          // On mobile, keep chapters collapsed by default on fresh portal open
+          setMobileExpandedUnits({})
+        } else {
+          setMobileExpandedUnits({})
         }
         setState('ready')
       } catch (e) {
@@ -218,6 +236,23 @@ export default function BuilderPage() {
     },
     [portalId, user, toast]
   )
+
+  // Change 1: Persist last edited unitId & chapterId per portalId
+  useEffect(() => {
+    if (state !== 'ready' || !sel.unitId) return
+    saveLastEdited(portalId, { unitId: sel.unitId, chapterId: sel.chapterId || null })
+  }, [state, portalId, sel.unitId, sel.chapterId])
+
+  // Focus/scroll the restored unit card into view on mobile when reopening a portal
+  useEffect(() => {
+    if (state !== 'ready' || !restoredLastEditedRef.current || !sel.unitId || sel.chapterId) return
+    restoredLastEditedRef.current = false
+    const raf = requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-mobile-unit-id="${CSS.escape ? CSS.escape(sel.unitId) : sel.unitId}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [state, sel.unitId, sel.chapterId])
 
   // autosave (debounced)
   useEffect(() => {
@@ -321,36 +356,48 @@ export default function BuilderPage() {
 
       const cur = navRef.current.target
       const curWorking = workingRef.current
-      const switchingChapter =
-        curWorking?.dirty &&
-        ((next.chapterId && next.chapterId !== cur.chapterId) ||
-          (!next.chapterId && cur.chapterId))
 
-      if (switchingChapter) {
+      // When switching to a unit from the structure tree, jump directly into its first chapter editor
+      let resolvedNext = next
+      if (source === 'tree' && next.unitId && !next.chapterId) {
+        const targetUnit = contentRef.current.units.find((u) => u.id === next.unitId)
+        if (targetUnit?.chapters?.length > 0) {
+          resolvedNext = normalizeTarget({ unitId: targetUnit.id, chapterId: targetUnit.chapters[0].id })
+        }
+      }
+
+      const needsSwitchConfirm = shouldConfirmSwitch(cur, resolvedNext, source, editLocked)
+
+      if (needsSwitchConfirm) {
+        // Close mobile Structure/Properties drawer immediately so confirmation modal is never hidden behind it
+        setPane('workspace')
         const ok = await confirm({
-          title: 'Unsaved changes in current chapter',
+          title: 'Switch Unit / Chapter?',
           message:
-            'You have unsaved edits in the current block. Save changes and switch to the new chapter?',
-          confirmText: 'Save & Switch',
+            'You are currently editing this unit/chapter. Do you want to switch to the selected unit/chapter editor?',
+          cancelText: 'Cancel',
+          confirmText: 'Switch',
         })
         if (!ok) return false
-        const updated = commitWorking()
-        await doSave(updated)
-      } else if (curWorking?.dirty && curWorking.block.id !== next.blockId) {
+        if (curWorking?.dirty) {
+          const updated = commitWorking()
+          await doSave(updated)
+        }
+      } else if (curWorking?.dirty && curWorking.block.id !== resolvedNext.blockId) {
         commitWorking()
       }
 
       if (source === 'tree') {
-        dispatchNav({ type: 'TREE_CLICK', target: next })
+        dispatchNav({ type: 'TREE_CLICK', target: resolvedNext })
       } else if (source === 'page') {
-        dispatchNav({ type: 'PAGE_CLICK', target: next })
+        dispatchNav({ type: 'PAGE_CLICK', target: resolvedNext })
       } else {
-        dispatchNav({ type: 'SELECT', target: next, source, scroll: !!opts.scroll })
+        dispatchNav({ type: 'SELECT', target: resolvedNext, source, scroll: !!opts.scroll })
       }
 
-      if (next.blockId) {
-        if (curWorking?.block?.id !== next.blockId) {
-          const b = findBlock(contentRef.current, next.blockId).block
+      if (resolvedNext.blockId) {
+        if (curWorking?.block?.id !== resolvedNext.blockId) {
+          const b = findBlock(contentRef.current, resolvedNext.blockId).block
           setWorking(b ? { block: clone(b), dirty: false } : null)
           setUiState({})
         }
@@ -363,12 +410,32 @@ export default function BuilderPage() {
       }
       return true
     },
-    [confirm, commitWorking, doSave]
+    [confirm, commitWorking, doSave, editLocked]
   )
 
   const handleToggleOpen = useCallback((kind, id) => {
     dispatchNav({ type: 'TOGGLE_OPEN', kind, id })
   }, [])
+
+  const handleToggleMobileUnit = useCallback(
+    async (unitId) => {
+      const isCurrentlyOpen = !!mobileExpandedUnits[unitId]
+      if (isCurrentlyOpen) {
+        setMobileExpandedUnits((prev) => ({ ...prev, [unitId]: false }))
+        return
+      }
+      const cur = navRef.current.target
+      if (cur.unitId && cur.unitId !== unitId) {
+        const ok = await handleSelect({ unitId }, 'page')
+        if (!ok) return
+      } else if (!cur.unitId) {
+        dispatchNav({ type: 'SELECT', target: { unitId }, source: 'action' })
+      }
+      // Single-open accordion: opening one unit hides other units' chapters
+      setMobileExpandedUnits({ [unitId]: true })
+    },
+    [mobileExpandedUnits, handleSelect]
+  )
 
   // Bridge editor UI state so JsonBlockEditor / JsonStudioCanvas jsonSec routes through handleSelect
   const setUi = useCallback(
@@ -455,7 +522,7 @@ export default function BuilderPage() {
           if (entry.isIntersecting) visibleMap.set(entry.target, entry)
           else visibleMap.delete(entry.target)
         })
-        if (Date.now() < spyPausedUntilRef.current) return
+        if (Date.now() < spyPausedUntilRef.current || paneRef.current === 'structure') return
         if (visibleMap.size === 0) return
 
         // Prefer section elements over block wrappers when both are in the active band
@@ -1139,17 +1206,45 @@ export default function BuilderPage() {
               content.units.length === 0 ? (
                 <Welcome onCreate={act.createUnit} />
               ) : (
-                <div className="ws-empty text-center p-5">
-                  <p className="text-soft">Select a unit or chapter from the structure tree.</p>
-                </div>
+                <>
+                  <div className="ws-empty text-center p-5 d-none d-lg-block">
+                    <p className="text-soft">Select a unit or chapter from the structure tree.</p>
+                  </div>
+                  <MobileUnitsAccordion
+                    units={content.units}
+                    activeUnitId={sel.unitId}
+                    activeChapterId={sel.chapterId}
+                    expandedUnitIds={mobileExpandedUnits}
+                    onToggleUnit={handleToggleMobileUnit}
+                    onSelect={handleSelect}
+                    onAddChapter={(uid) => act.addChapter(uid)}
+                    onEditUnit={(u) => act.editUnit(u)}
+                    onCreateUnit={act.createUnit}
+                  />
+                </>
               )
             ) : !chapter ? (
-              <UnitView
-                unit={unit}
-                onSelect={handleSelect}
-                onEdit={() => act.editUnit(unit)}
-                onAddChapter={() => act.addChapter(unit.id)}
-              />
+              <>
+                <div className="d-none d-lg-block">
+                  <UnitView
+                    unit={unit}
+                    onSelect={handleSelect}
+                    onEdit={() => act.editUnit(unit)}
+                    onAddChapter={() => act.addChapter(unit.id)}
+                  />
+                </div>
+                <MobileUnitsAccordion
+                  units={content.units}
+                  activeUnitId={sel.unitId}
+                  activeChapterId={sel.chapterId}
+                  expandedUnitIds={mobileExpandedUnits}
+                  onToggleUnit={handleToggleMobileUnit}
+                  onSelect={handleSelect}
+                  onAddChapter={(uid) => act.addChapter(uid)}
+                  onEditUnit={(u) => act.editUnit(u)}
+                  onCreateUnit={act.createUnit}
+                />
+              </>
             ) : (
               <>
                 <Crumbs
@@ -1157,7 +1252,8 @@ export default function BuilderPage() {
                   chapter={chapter}
                   block={block}
                   badge={
-                    <span className="ws-editing-badge" title="Currently active chapter being edited">
+                    <span className="ws-editing-badge" title="Edit lock active — switching unit or chapter asks for confirmation">
+                      <LuLock aria-hidden="true" style={{ fontSize: '0.85em', marginRight: 4, verticalAlign: '-1px' }} />
                       Editing: <strong>Unit {unitIndex + 1} · Ch {chIndex + 1}</strong> ({chapter.title})
                     </span>
                   }

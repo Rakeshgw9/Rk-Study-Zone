@@ -170,7 +170,10 @@ export default function StructureTree({
                         <LuGripVertical className="grip d-none d-lg-block" aria-hidden="true" />
                         <span className="ch-ico"><LuBookOpen /></span>
                         <span className="t flex-grow-1 min-w-0">{ch.title}</span>
-                        {sel.chapterId === ch.id && <span className="tree-active-pill">ACTIVE</span>}
+
+                        
+{sel.chapterId === ch.id && <span className="tree-active-pill">✓</span>}
+
                         <button type="button" className="icon-mini" onClick={(e) => { e.stopPropagation(); toggleChapter(ch.id) }} aria-label={chapterOpen(ch.id) ? 'Collapse' : 'Expand'}>{chapterOpen(ch.id) ? <LuChevronDown /> : <LuChevronRight />}</button>
                         <Kebab label={`Chapter options for ${ch.title}`} items={[
                           { label: 'Edit Chapter', icon: <LuSquarePen />, onClick: () => act.editChapter(ch, u) },

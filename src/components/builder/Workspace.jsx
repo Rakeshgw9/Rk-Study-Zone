@@ -3,6 +3,7 @@ import {
   LuArrowLeft,
   LuArrowUp,
   LuBookOpen,
+  LuChevronDown,
   LuChevronRight,
   LuCirclePlus,
   LuClock,
@@ -292,6 +293,158 @@ export function UnitView({ unit, onSelect, onAddChapter, onEdit }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+
+/**
+ * Mobile-only collapsible accordion listing all units of the portal.
+ * Chapters are collapsed by default unless expanded by tapping or restored from last-edited state.
+ */
+export function MobileUnitsAccordion({
+  units = [],
+  activeUnitId,
+  activeChapterId,
+  expandedUnitIds = {},
+  onToggleUnit,
+  onSelect,
+  onAddChapter,
+  onEditUnit,
+  onCreateUnit,
+}) {
+  return (
+    <div className="ws-mobile-units d-lg-none" aria-label="All portal units">
+      <div className="ws-mob-units-head">
+        <div className="min-w-0">
+          <h2 className="ws-mob-units-title">Portal Units ({units.length})</h2>
+          <small className="text-soft">Tap a unit to expand its chapters</small>
+        </div>
+        <button
+          type="button"
+          className="btn ui-btn ui-btn-primary btn-sm"
+          onClick={onCreateUnit}
+        >
+          <LuCirclePlus /> New Unit
+        </button>
+      </div>
+
+      <div className="ws-mob-accordion">
+        {units.map((u, idx) => {
+          const isOpen = !!expandedUnitIds[u.id]
+          const isActive = u.id === activeUnitId
+          const bannerBg =
+            u.headingBackgroundMode === 'image' && u.headingBackgroundImage
+              ? `linear-gradient(90deg,rgba(4,10,24,.75),rgba(4,10,24,.35)),url(${u.headingBackgroundImage}) center/cover`
+              : u.headingBackgroundMode === 'solid'
+              ? u.headingSolidColor || '#0d47a1'
+              : `linear-gradient(110deg, ${u.headingStartColor || '#0756b9'}, ${
+                  u.headingEndColor || '#087fcb'
+                })`
+
+          return (
+            <section
+              key={u.id}
+              data-mobile-unit-id={u.id}
+              className={`ws-mob-unit-card ${isOpen ? 'is-open' : ''} ${isActive ? 'is-active' : ''}`}
+            >
+              <div
+                className="ws-mob-unit-head"
+                role="button"
+                tabIndex={0}
+                aria-expanded={isOpen}
+                style={{
+                  '--c': u.color,
+                  background: bannerBg,
+                  color: u.headingTextColor || '#fff',
+                  borderColor: u.headingAccentColor || u.color,
+                }}
+                onClick={() => onToggleUnit(u.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onToggleUnit(u.id)
+                  }
+                }}
+              >
+                <span className="b-ico" style={{ background: u.color }}>
+                  <IconOf name={u.icon} />
+                </span>
+                <div className="ws-mob-unit-copy min-w-0 flex-grow-1">
+                  <span className="ws-mob-unit-kicker">
+                    Unit {idx + 1} · {plural(u.chapters.length, 'chapter')}
+                  </span>
+                  <h3 className="ws-mob-unit-name" title={u.title}>
+                    {u.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  className="icon-mini ws-mob-unit-edit"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEditUnit(u)
+                  }}
+                  aria-label={`Edit ${u.title}`}
+                  title="Edit unit"
+                >
+                  <LuSquarePen />
+                </button>
+                <span className={`ws-mob-unit-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden="true">
+                  {isOpen ? <LuChevronDown /> : <LuChevronRight />}
+                </span>
+              </div>
+
+              <div className={`ws-mob-unit-body ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
+                <div className="ws-mob-unit-body-inner">
+                  <StatsRow unit={u} />
+                  {u.chapters.length === 0 ? (
+                    <div className="ws-empty ws-mob-empty">
+                      <p className="mb-2">No chapters in this unit yet.</p>
+                      <button
+                        type="button"
+                        className="btn ui-btn ui-btn-primary btn-sm"
+                        onClick={() => onAddChapter(u.id)}
+                      >
+                        <LuCirclePlus /> Add Chapter
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="ws-list">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h4 className="ws-h mb-0">Chapters ({u.chapters.length})</h4>
+                        <button
+                          type="button"
+                          className="btn ui-btn ui-btn-secondary btn-sm"
+                          onClick={() => onAddChapter(u.id)}
+                        >
+                          <LuPlus /> Add Chapter
+                        </button>
+                      </div>
+                      {u.chapters.map((ch, ci) => (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          className={`ws-item ${ch.id === activeChapterId ? 'is-active' : ''}`}
+                          style={{ '--c': ch.color }}
+                          onClick={() => onSelect({ unitId: u.id, chapterId: ch.id }, 'page')}
+                        >
+                          <span className="n">{ci + 1}</span>
+                          <span className="min-w-0 flex-grow-1 text-start">
+                            <b>{ch.title}</b>
+                            <small>{plural(ch.blocks.length, 'block')}</small>
+                          </span>
+                          <LuChevronRight />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -11,7 +11,7 @@ import { fromFirestoreSafe, toFirestoreSafe } from '../lib/firestoreSafe'
 const sKey = (uid, pid) => `rk_demo_student_${uid}_${pid}`
 const eKey = 'rk_demo_enrollments'
 const readLS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } }
-const emptyData = (uid, portalId) => ({ uid, portalId, completed: {}, notes: {}, blockNotes: {}, bookmarks: [], attempts: {}, scores: {}, lastChapterId: null })
+const emptyData = (uid, portalId) => ({ uid, portalId, completed: {}, notes: {}, blockNotes: {}, bookmarks: [], attempts: {}, scores: {}, lastChapterId: null, lastReading: null, chapterReading: {} })
 
 export async function enroll(user, portal) {
   const id = `${user.uid}_${portal.id}`

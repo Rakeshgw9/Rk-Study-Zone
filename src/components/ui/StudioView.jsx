@@ -1,5 +1,6 @@
 import { LuPencil } from 'react-icons/lu'
-import { IMAGE_LAYOUTS, LIST_STYLES, SECTION_SCHEMA, fmt, safeImageUrl, safeScopedCss, sectionTitle, tableCols, textStyleVars, youtubeEmbedUrl, youtubeWatchUrl } from '../../lib/jsonStudio'
+import { IMAGE_LAYOUTS, LIST_STYLES, SECTION_SCHEMA, fmt, resolveEffectiveTheme, safeImageUrl, safeScopedCss, sectionTitle, tableCols, textStyleVars, youtubeEmbedUrl, youtubeWatchUrl } from '../../lib/jsonStudio'
+import { useTheme } from '../../context/ThemeContext'
 
 /* Native (iframe-free) renderer for JSON Studio lessons. It prints the same classes studioCss() styles, so the builder artboard,
  * the student lesson page and the PDF all look identical. Every text goes through fmt() (sanitised HTML only). */
@@ -153,16 +154,19 @@ export const studioSecId = (blockId, secId) => `sec-${blockId}-${secId}`
  *  customCss – optional author CSS, scoped to this block   onNote({ key, title }) / noteKeys – per-section "Add note" buttons
  */
 export default function StudioView({ sections, theme, textStyle, blockId = 'x', full = true, customCss = '', onNote, noteKeys = [] }) {
+  const { theme: appTheme } = useTheme()
+  const effTheme = resolveEffectiveTheme(theme, appTheme)
   const safeId = String(blockId).replace(/[^\w-]/g, '')
   const notes = !!onNote && sections.length >= 2
   return (
     <>
       {safeScopedCss(customCss) ? <style>{`[data-js-block="${safeId}"]{${safeScopedCss(customCss)}}`}</style> : null}
-      <div className={`json-artboard-content${full ? ' js-full' : ''}`} data-theme={theme} data-js-block={safeId} style={textStyleVars(textStyle)}>
+      <div className={`json-artboard-content${full ? ' js-full' : ''}`} data-theme={effTheme} data-js-block={safeId} style={textStyleVars(textStyle)}>
         {sections.map((s) => {
           const has = noteKeys.includes(s.id)
+          const secTheme = s.theme ? resolveEffectiveTheme(s.theme, appTheme) : undefined
           return (
-            <section key={s.id} id={studioSecId(blockId, s.id)} className={`js-sec js-${s.type.replace(/_/g, '-')}${notes ? ' js-has-note' : ''}`} data-theme={s.theme || undefined} aria-label={SECTION_SCHEMA[s.type]?.label}>
+            <section key={s.id} id={studioSecId(blockId, s.id)} className={`js-sec js-${s.type.replace(/_/g, '-')}${notes ? ' js-has-note' : ''}`} data-theme={secTheme} aria-label={SECTION_SCHEMA[s.type]?.label}>
               <Head s={s} />
               <Body s={s} />
               <InlineImages images={s.images} />

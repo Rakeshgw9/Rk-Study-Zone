@@ -2529,3 +2529,63 @@ button { font-family: inherit; }
     white-space: nowrap !important;
   }
 }
+
+/* ============================================================
+   CHANGE 5: MCQ EXAM SCREEN — FULL-WIDTH INLINE NEXT & CLEAN FOOTER
+   ============================================================ */
+@media (max-width: 767.98px) {
+  .mcq-exam-body-grid {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  .mcq-panel-question {
+    padding: 12px 14px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  .mcq-question-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 20px !important;
+  }
+  .mcq-mobile-inline-next {
+    margin-top: 16px;
+    width: 100%;
+  }
+  .mcq-inline-next-btn {
+    width: 100% !important;
+    min-height: 46px;
+    border-radius: 12px !important;
+    font-size: 0.94rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .mcq-question-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 30 !important;
+    background: rgba(7, 20, 48, 0.98) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    margin: 0 -14px !important;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    border-top: 1px solid rgba(56, 189, 248, 0.22);
+    justify-content: flex-start !important;
+    gap: 10px !important;
+  }
+  .mcq-panel-navigator.is-drawer-open {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .mcq-result-screen {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}

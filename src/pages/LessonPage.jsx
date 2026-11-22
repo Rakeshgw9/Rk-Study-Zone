@@ -43,6 +43,13 @@ import { usePrefs } from '../context/PrefsContext'
 import { frameProps } from '../lib/blockRender'
 import { flatChapters } from '../lib/content'
 import { chapterProgress, visibleContent } from '../lib/progress'
+import {
+  buildReadingRecord,
+  getSavedReadingForChapter,
+  parseReadingAnchor,
+  resolveInitialChapterId,
+  withReadingPosition,
+} from '../lib/readingPosition'
 import { isAdminRole, isStaffRole } from '../services/authService'
 import { loadDraft, loadPublished } from '../services/contentService'
 import { syllabusFilesOf } from '../services/portalService'
@@ -234,6 +241,17 @@ export default function LessonPage() {
   const [search, setSearch] = useState('')
   const [treeOpen, setTreeOpen] = useState(false)
   const [toolsDrawerOpen, setToolsDrawerOpen] = useState(false)
+
+  // Prevent background page scroll while a mobile drawer is open without blocking drawer touch scroll
+  useEffect(() => {
+    const mobileDrawerOpen = treeOpen || toolsDrawerOpen
+    if (!mobileDrawerOpen) return undefined
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [treeOpen, toolsDrawerOpen])
   const [leftSidebarHidden, setLeftSidebarHidden] = useState(() => !!prefs.focusMode)
   const [rightSidebarHidden, setRightSidebarHidden] = useState(() => !!prefs.focusMode)
   const [noteEdit, setNoteEdit] = useState(null) // { key, blockId, title, text }
@@ -294,9 +312,10 @@ export default function LessonPage() {
   const requestedChapter = chapterId
     ? flat.find((x) => x.chapter.id === chapterId || x.chapter.slug === chapterId)?.chapter.id
     : null
+  const resolvedChapterId = resolveInitialChapterId({ requestedChapter, unitFirstChapterId, sd })
   const curIndex = Math.max(
     0,
-    flat.findIndex((x) => x.chapter.id === (requestedChapter || unitFirstChapterId || sd?.lastChapterId))
+    flat.findIndex((x) => x.chapter.id === resolvedChapterId)
   )
   const cur = flat[curIndex]
   const q = isDraft ? '?draft=1' : ''
@@ -306,15 +325,29 @@ export default function LessonPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // persist student data (debounced)
+  // persist student data (debounced) + flush on pagehide/visibilitychange for cross-device resume
   const saveTimer = useRef(null)
+  const pendingSaveRef = useRef(null)
+  const sdRef = useRef(sd)
+  sdRef.current = sd
+  const readingTrackPausedUntilRef = useRef(0)
+  const explicitAnchorJumpRef = useRef(null)
+
   const update = useCallback(
     (fn) => {
       setSd((prev) => {
+        if (!prev) return prev
         const next = fn(prev)
+        if (next === prev) return prev
+        pendingSaveRef.current = next
         clearTimeout(saveTimer.current)
-        if (!isDraft)
-          saveTimer.current = setTimeout(() => saveStudentData(next).catch((e) => console.warn(e)), 700)
+        if (!isDraft) {
+          saveTimer.current = setTimeout(() => {
+            const toSave = pendingSaveRef.current
+            pendingSaveRef.current = null
+            if (toSave) saveStudentData(toSave).catch((e) => console.warn(e))
+          }, 700)
+        }
         return next
       })
     },
@@ -322,9 +355,158 @@ export default function LessonPage() {
   )
 
   useEffect(() => {
+    if (isDraft) return undefined
+    const flushNow = () => {
+      if (pendingSaveRef.current) {
+        clearTimeout(saveTimer.current)
+        const toSave = pendingSaveRef.current
+        pendingSaveRef.current = null
+        saveStudentData(toSave).catch(() => {})
+      }
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') flushNow()
+    }
+    window.addEventListener('pagehide', flushNow)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('pagehide', flushNow)
+      document.removeEventListener('visibilitychange', onVis)
+      flushNow()
+    }
+  }, [isDraft])
+
+  useEffect(() => {
     if (cur && sd && sd.lastChapterId !== cur.chapter.id)
       update((p) => ({ ...p, lastChapterId: cur.chapter.id }))
   }, [cur, sd, update])
+
+  // Cross-device resume: restore last-read block/section when opening any chapter
+  const curUnitId = cur?.unit?.id || null
+  const curChapterId = cur?.chapter?.id || null
+  const curBlockCount = cur?.chapter?.blocks?.length || 0
+
+  useEffect(() => {
+    if (state !== 'ready' || !curChapterId || !sdRef.current) return undefined
+    // If user explicitly jumped to a section via CourseTree, let CourseTree handle scrolling
+    if (explicitAnchorJumpRef.current?.chapterId === curChapterId) {
+      explicitAnchorJumpRef.current = null
+      readingTrackPausedUntilRef.current = Date.now() + 1200
+      return undefined
+    }
+    const saved = getSavedReadingForChapter(sdRef.current, curChapterId)
+    if (!saved || (!saved.anchorId && !saved.blockId)) return undefined
+
+    readingTrackPausedUntilRef.current = Date.now() + 1400
+    let attempts = 0
+    let timer = null
+    let clearHighlight = null
+    let cancelled = false
+
+    const tryScroll = () => {
+      if (cancelled) return
+      const el =
+        (saved.anchorId && document.getElementById(saved.anchorId)) ||
+        (saved.blockId && document.getElementById(`b-${saved.blockId}`))
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        el.classList.add('reading-resume-highlight')
+        clearHighlight = setTimeout(() => el.classList.remove('reading-resume-highlight'), 2200)
+        return
+      }
+      attempts += 1
+      if (attempts < 12) {
+        timer = setTimeout(tryScroll, 120)
+      }
+    }
+
+    timer = setTimeout(tryScroll, 140)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      clearTimeout(clearHighlight)
+    }
+  }, [state, curChapterId, curBlockCount])
+
+  // Cross-device tracking: record active reading block/section as student scrolls
+  useEffect(() => {
+    if (state !== 'ready' || isDraft || !curUnitId || !curChapterId) return undefined
+    let raf = 0
+    let debounceTimer = null
+
+    const captureVisible = () => {
+      if (Date.now() < readingTrackPausedUntilRef.current) return
+      const canvas = document.querySelector('.lesson-canvas')
+      if (!canvas) return
+      const nodes = Array.from(canvas.querySelectorAll('.js-sec[id^="sec-"], .lesson-block[id^="b-"]'))
+      if (!nodes.length) return
+
+      const line = window.innerHeight * 0.35
+      // Prefer deepest section element whose top has crossed the reading line, else block element
+      let activeSec = null
+      let activeBlk = null
+      for (const el of nodes) {
+        const r = el.getBoundingClientRect()
+        if (r.top <= line) {
+          if (el.id.startsWith('sec-')) activeSec = el
+          else if (el.id.startsWith('b-')) activeBlk = el
+        }
+      }
+      // If activeSec belongs to activeBlk (or no activeBlk yet), prefer activeSec
+      const chosen = activeSec || activeBlk || nodes[0]
+      if (!chosen?.id) return
+
+      const parentBlkEl = chosen.id.startsWith('b-') ? chosen : chosen.closest('.lesson-block[id^="b-"]')
+      const parentBlockId = parentBlkEl?.id?.startsWith('b-') ? parentBlkEl.id.slice(2) : null
+      const parsed = parseReadingAnchor(chosen.id, parentBlockId)
+      const record = buildReadingRecord({
+        unitId: curUnitId,
+        chapterId: curChapterId,
+        blockId: parsed.blockId,
+        sectionId: parsed.sectionId,
+        anchorId: parsed.anchorId,
+      })
+      if (record) {
+        update((p) => withReadingPosition(p, record))
+      }
+    }
+
+    const onScroll = () => {
+      if (Date.now() < readingTrackPausedUntilRef.current) return
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(captureVisible, 350)
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(raf)
+      clearTimeout(debounceTimer)
+    }
+  }, [state, isDraft, curUnitId, curChapterId, curBlockCount, update])
+
+  const handlePickSection = useCallback(
+    ({ chapterId: targetChId, blockId: targetBlkId, anchorId }) => {
+      if (!targetChId || !anchorId) return
+      explicitAnchorJumpRef.current = { chapterId: targetChId, anchorId }
+      readingTrackPausedUntilRef.current = Date.now() + 1200
+      const targetUnitId =
+        flat.find((x) => x.chapter.id === targetChId)?.unit?.id || curUnitId || null
+      const parsed = parseReadingAnchor(anchorId, targetBlkId)
+      const record = buildReadingRecord({
+        unitId: targetUnitId,
+        chapterId: targetChId,
+        blockId: parsed.blockId,
+        sectionId: parsed.sectionId,
+        anchorId: parsed.anchorId,
+      })
+      if (record) update((p) => withReadingPosition(p, record))
+    },
+    [flat, curUnitId, update]
+  )
 
   useEffect(() => {
     if (cur) setNoteText(sd?.notes?.[cur.chapter.id] || '')
@@ -600,6 +782,7 @@ export default function LessonPage() {
           currentId={chapter.id}
           onOpen={go}
           onToggleBlock={toggleBlock}
+          onPickSection={handlePickSection}
           search={search}
           open={treeOpen}
           onClose={() => setTreeOpen(false)}
@@ -810,6 +993,7 @@ export default function LessonPage() {
               <LuX />
             </button>
           </div>
+          <div className="st-side-body">
           {/* Study Tools Card */}
           <div className="st-card">
             <div className="st-card-title">
@@ -909,6 +1093,7 @@ export default function LessonPage() {
             <div className="bar mt-3">
               <span style={{ width: `${cp.pct}%` }} />
             </div>
+          </div>
           </div>
         </aside>
       </div>

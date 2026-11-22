@@ -14,7 +14,7 @@ function scrollToAnchor(id) {
 }
 let pendingAnchor = null // clicked sub-section of a chapter that is still loading
 
-export default function CourseTree({ portal, content, done, currentId, onOpen, onToggleBlock, search, open, onClose, headRight }) {
+export default function CourseTree({ portal, content, done, currentId, onOpen, onToggleBlock, onPickSection, search, open, onClose, headRight }) {
   const curUnit = content.units.find((u) => u.chapters.some((c) => c.id === currentId))?.id
   const [exp, setExp] = useState({})
   const isUnitOpen = (id) => (exp[`u:${id}`] ?? (id === curUnit))
@@ -70,6 +70,7 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
   }, [spyKey, currentId])
 
   const openSub = (c, b, o) => {
+    onPickSection?.({ chapterId: c.id, blockId: b.id, anchorId: o.anchor })
     if (c.id !== currentId) { pendingAnchor = o.anchor; onOpen(c.id); return }
     scrollToAnchor(o.anchor)
     if (window.matchMedia?.('(max-width: 1199.98px)').matches) onClose?.()
@@ -96,7 +97,16 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
             const uo = term ? true : isUnitOpen(u.id)
             return (
               <li key={u.id}>
-                <button className="st-unit" style={{ '--c': u.color }} onClick={() => setExp((e) => ({ ...e, [`u:${u.id}`]: !uo }))} aria-expanded={uo}>
+                <button className="st-unit" style={{ '--c': u.color }} onClick={() => setExp((e) => {
+                  const next = {}
+                  Object.keys(e).forEach((k) => { if (!k.startsWith('u:')) next[k] = e[k] })
+                  if (!uo) {
+                    content.units.forEach((other) => { next[`u:${other.id}`] = other.id === u.id })
+                  } else {
+                    next[`u:${u.id}`] = false
+                  }
+                  return next
+                })} aria-expanded={uo}>
                   <span className="ico"><IconOf name={u.icon} /></span>
                   <span className="min-w-0 flex-grow-1 text-start"><small>Unit {ui + 1}</small><b title={u.title}>{u.title}</b></span>
                   <span className={`pct ${up.pct === 100 ? 'full' : ''}`}>{up.pct}%</span>
@@ -116,7 +126,16 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
                               <span className="t" title={c.title}>{c.title}</span>
                               <span className="pct">{cp.pct}%</span>
                             </button>
-                            {c.blocks.length > 0 && <button className="icon-mini" onClick={() => setExp((e) => ({ ...e, [`c:${c.id}`]: !co }))} aria-label={co ? 'Hide blocks' : 'Show blocks'}>{co ? <LuChevronDown /> : <LuChevronRight />}</button>}
+                            {c.blocks.length > 0 && <button className="icon-mini" onClick={() => setExp((e) => {
+                  const next = {}
+                  Object.keys(e).forEach((k) => { if (!k.startsWith('c:')) next[k] = e[k] })
+                  if (!co) {
+                    content.units.forEach((uu) => uu.chapters.forEach((cc) => { next[`c:${cc.id}`] = cc.id === c.id }))
+                  } else {
+                    next[`c:${c.id}`] = false
+                  }
+                  return next
+                })} aria-label={co ? 'Hide blocks' : 'Show blocks'}>{co ? <LuChevronDown /> : <LuChevronRight />}</button>}
                           </div>
                           {co && c.blocks.length > 0 && (
                             <ul className="st-blocks">

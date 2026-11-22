@@ -35,7 +35,7 @@ import {
   validateLessonJson,
 } from '../../lib/jsonLesson'
 import { frameProps } from '../../lib/blockRender'
-import { STUDIO_TEMPLATE, STUDIO_TEMPLATE_JSON, buildStudioJson, insertSectionAt, normalizeToSections, setSectionTheme, themeById } from '../../lib/jsonStudio'
+import { STUDIO_TEMPLATE, STUDIO_TEMPLATE_JSON, buildStudioJson, insertSectionAt, normalizeToSections, setSectionTheme, themeById, resolveEffectiveTheme } from '../../lib/jsonStudio'
 import { uploadImage } from '../../services/storageService'
 import Modal from '../Modal'
 import { DeviceToggle, Field, NumberField, Section, Tabs, Toggle, deviceWidth } from '../ui/Controls'
@@ -46,6 +46,7 @@ import JsonStudioCanvas from './JsonStudioCanvas'
 import { FormatGuide, PresetBlocks, TextStyleEditor, ThemePicker } from './JsonStudioPanels'
 import { scrollToStudioSection } from '../../lib/jsonStudioDom'
 import { useToast } from '../Toast'
+import { useTheme } from '../../context/ThemeContext'
 import { useConfirm } from '../ui/Confirm'
 
 const CodeEditor = lazy(() => import('../ui/CodeEditor'))
@@ -72,6 +73,7 @@ function mergeLessons(cur, inc) {
  * 5. Full Edit Text on Canvas synchronization preserved.
  */
 export function JsonCenter({ block, setData, ui, setUi }) {
+  const { theme: appTheme } = useTheme()
   const d = block.data
   const toast = useToast()
   const confirm = useConfirm()
@@ -331,7 +333,7 @@ export function JsonCenter({ block, setData, ui, setUi }) {
         {isStudio ? (
           <div className="ed-preview">
             <div className="js-studio-wrap" style={{ maxWidth: deviceWidth(ui.device) }}>
-              <JsonStudioCanvas sections={studio.sections} theme={studio.theme} textStyle={studio.textStyle} activeId={ui.jsonSec || null} onActivate={(id) => setUi({ jsonSec: id })} onChange={(sections) => writeStudio(sections)} onUploadImage={(f) => uploadImage(f, 'json-media', { max: 1200 })} onNotify={(m, kind) => toast(m, kind)} />
+              <JsonStudioCanvas sections={studio.sections} theme={resolveEffectiveTheme(studio.theme, appTheme)} textStyle={studio.textStyle} activeId={ui.jsonSec || null} onActivate={(id) => setUi({ jsonSec: id })} onChange={(sections) => writeStudio(sections)} onUploadImage={(f) => uploadImage(f, 'json-media', { max: 1200 })} onNotify={(m, kind) => toast(m, kind)} />
             </div>
           </div>
         ) : (
@@ -643,6 +645,7 @@ function ColorInput({ label, value, onChange }) {
 
 /** Right Sidebar Properties for JSON Block */
 export function JsonProps({ block, setBlock, setData, ui, setUi, onSave, dirty, portalId }) {
+  const { theme: appTheme } = useTheme()
   const d = block.data
   const st = { ...DEFAULT_JSON_STYLE, ...d.style }
   const setStyle = (p) => setData({ style: { ...st, ...p } })
@@ -781,7 +784,7 @@ export function JsonProps({ block, setBlock, setData, ui, setUi, onSave, dirty, 
                     </div>
                   </div>
                 )}
-                <ThemePicker value={activeSec ? activeSec.theme || studio.theme : studio.theme} note={activeSec ? (activeSec.theme ? 'Section theme' : 'Block default') : 'Block theme'} onPick={pickTheme} />
+                <ThemePicker value={resolveEffectiveTheme(activeSec ? activeSec.theme || studio.theme : studio.theme, appTheme)} note={activeSec ? (activeSec.theme ? 'Section theme' : 'Block default') : 'Block theme'} onPick={pickTheme} />
               </Section>
               <Section title="Preset Section Blocks" icon={<LuBraces />}>
                 <PresetBlocks onAdd={addPreset} />
@@ -879,7 +882,7 @@ export function JsonProps({ block, setBlock, setData, ui, setUi, onSave, dirty, 
       {tab === 'style' && isStudio && (
         <Section title="Text Style" icon={<LuSparkles />}>
           <p className="small text-soft mb-2">Typography for the whole JSON block. It shows live on the artboard, the student page and the PDF.</p>
-          <TextStyleEditor value={studio.textStyle} themeId={studio.theme} onChange={(ts) => writeStudio(undefined, undefined, ts)} />
+          <TextStyleEditor value={studio.textStyle} themeId={resolveEffectiveTheme(studio.theme, appTheme)} onChange={(ts) => writeStudio(undefined, undefined, ts)} />
         </Section>
       )}
 

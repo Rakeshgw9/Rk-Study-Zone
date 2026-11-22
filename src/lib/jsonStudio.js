@@ -37,6 +37,20 @@ export const LIGHT_THEMES = [
 ]
 export const JSON_THEMES = [...DARK_THEMES, ...LIGHT_THEMES]
 export const DEFAULT_THEME = 'midnight-slate'
+export const DEFAULT_LIGHT_THEME = 'pure-paper'
+
+/**
+ * Resolves the active Studio theme for the current app theme ('dark' | 'light').
+ * Dark mode keeps Midnight Slate (or any chosen theme); Light mode switches dark
+ * Studio themes (including default Midnight Slate) to Pure Paper automatically.
+ */
+export function resolveEffectiveTheme(studioTheme, appTheme = 'dark') {
+  const base = themeById(studioTheme || DEFAULT_THEME)
+  if (appTheme === 'light' && base.mode === 'dark') {
+    return DEFAULT_LIGHT_THEME
+  }
+  return base.id
+}
 export const isThemeId = (id) => JSON_THEMES.some((t) => t.id === id)
 export const themeById = (id) => JSON_THEMES.find((t) => t.id === id) || JSON_THEMES[0]
 
