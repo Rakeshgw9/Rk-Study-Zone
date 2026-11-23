@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { LuCopy, LuEllipsisVertical, LuPencil, LuSettings2, LuSquareArrowOutUpRight, LuTrash2 } from 'react-icons/lu'
+import { LuCopy, LuEllipsisVertical, LuPencil, LuSettings2, LuShare2, LuSquareArrowOutUpRight, LuTrash2 } from 'react-icons/lu'
 import { portalVisual } from './portalIcon'
 
 function Thumb({ portal }) {
   const { Icon, tone } = portalVisual(portal)
-  if (portal.coverUrl) return <img src={portal.coverUrl} alt="" className={`portal-thumb tone-${tone}`} />
+  if (portal.coverUrl) return <img src={portal.coverUrl} alt="" className={`portal-thumb tone-${tone}`} loading="lazy" decoding="async" width="44" height="44" />
   return <span className={`portal-thumb tone-${tone}`}><Icon /></span>
 }
 
@@ -15,7 +15,7 @@ const StatusBadge = ({ status, published }) => (
   </span>
 )
 
-function More({ p, onDetails, onDuplicate, onDelete }) {
+function More({ p, onDetails, onDuplicate, onDelete, onShare }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const ref = useRef(null)
@@ -26,10 +26,11 @@ function More({ p, onDetails, onDuplicate, onDelete }) {
   }, [open])
   return (
     <div className="kebab" ref={ref}>
-      <button className="action-btn" onClick={(e) => { const r=e.currentTarget.getBoundingClientRect(); const h=132; setPos({ top: r.bottom + h > window.innerHeight ? Math.max(8, r.top-h-4) : r.bottom+4, left: Math.max(8, Math.min(r.right-190, window.innerWidth-198)) }); setOpen((o) => !o) }} aria-label={`More actions for ${p.name}`} aria-expanded={open}><LuEllipsisVertical /></button>
+      <button className="action-btn" onClick={(e) => { const r=e.currentTarget.getBoundingClientRect(); const h=p.publishedAt && onShare ? 176 : 132; setPos({ top: r.bottom + h > window.innerHeight ? Math.max(8, r.top-h-4) : r.bottom+4, left: Math.max(8, Math.min(r.right-190, window.innerWidth-198)) }); setOpen((o) => !o) }} aria-label={`More actions for ${p.name}`} aria-expanded={open}><LuEllipsisVertical /></button>
       {open && (
         <div className="kebab-menu kebab-fixed" style={{ top: pos.top, left: pos.left }} role="menu">
           <button role="menuitem" onClick={() => { setOpen(false); onDetails(p) }}><LuSettings2 /> Edit details</button>
+          {p.publishedAt && onShare && <button role="menuitem" onClick={() => { setOpen(false); onShare(p) }}><LuShare2 /> Share links</button>}
           <button role="menuitem" onClick={() => { setOpen(false); onDuplicate(p) }}><LuCopy /> Duplicate</button>
           <button role="menuitem" className="danger" onClick={() => { setOpen(false); onDelete(p) }}><LuTrash2 /> Delete</button>
         </div>
@@ -38,8 +39,8 @@ function More({ p, onDetails, onDuplicate, onDelete }) {
   )
 }
 
-export default function PortalTable({ portals, onEdit, onOpen, onDetails, onDuplicate, onDelete }) {
-  const more = (p) => <More p={p} onDetails={onDetails} onDuplicate={onDuplicate} onDelete={onDelete} />
+export default function PortalTable({ portals, onEdit, onOpen, onDetails, onDuplicate, onDelete, onShare }) {
+  const more = (p) => <More p={p} onDetails={onDetails} onDuplicate={onDuplicate} onDelete={onDelete} onShare={onShare} />
   return (
     <div className="glass-panel p-0 overflow-hidden">
       {/* Desktop / tablet table */}

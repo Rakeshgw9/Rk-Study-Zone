@@ -1,0 +1,29 @@
+/* Phase C — notifications */
+.nt-badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #ff3b47; color: #fff; font-size: .68rem; font-weight: 700; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--c-panel-solid, #061430); }
+.nt-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 2000; width: min(380px, calc(100vw - 20px)); background: var(--c-panel-solid); color: var(--c-text); border: 1px solid var(--c-line-strong); border-radius: 14px; box-shadow: var(--c-shadow); overflow: hidden; }
+.nt-pop-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--c-line); }
+.nt-link { background: none; border: 0; color: var(--c-cyan, var(--c-primary)); font-size: .8rem; display: inline-flex; gap: 4px; align-items: center; min-height: 32px; }
+.nt-link:disabled { opacity: .45; }
+.nt-pop-list { max-height: min(60vh, 420px); overflow-y: auto; }
+.nt-pop-foot { display: block; text-align: center; padding: 12px; border-top: 1px solid var(--c-line); font-size: .86rem; font-weight: 600; color: var(--c-cyan, var(--c-primary)); text-decoration: none; min-height: 44px; }
+.nt-empty { padding: 24px 14px; text-align: center; color: var(--c-soft); font-size: .9rem; }
+@media (max-width: 575.98px) { .nt-pop { position: fixed; left: 10px; right: 10px; top: 58px; width: auto; } }
+.nt-list { display: grid; }
+.nt-item { all: unset; box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; width: 100%; cursor: pointer; border-bottom: 1px solid var(--c-line); min-height: 44px; }
+.nt-item:last-child { border-bottom: 0; }
+.nt-item:hover, .nt-item:focus-visible { background: var(--c-hover); }
+.nt-item:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+.nt-item.unread { background: rgba(60, 140, 255, .07); }
+.nt-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--c-raise); display: inline-flex; align-items: center; justify-content: center; color: var(--c-cyan, var(--c-primary)); }
+.nt-main { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.nt-title { font-weight: 600; font-size: .9rem; overflow-wrap: anywhere; }
+.nt-body { color: var(--c-soft); font-size: .82rem; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.nt-item:not(.compact) .nt-body { -webkit-line-clamp: unset; display: block; }
+.nt-meta { display: flex; gap: 8px; flex-wrap: wrap; color: var(--c-faint); font-size: .74rem; }
+.nt-dot { flex: none; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: #3c8cff; }
+.nt-prefs { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.nt-prefs legend { float: none; margin-bottom: 6px; }
+.nt-pref { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--c-line); min-height: 44px; cursor: pointer; }
+.nt-pref span { display: grid; }
+.nt-pref small { color: var(--c-soft); font-size: .78rem; }
+.nt-pref .form-check-input { width: 2.4em; height: 1.3em; flex: none; }

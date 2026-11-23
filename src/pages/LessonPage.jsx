@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { SkeletonEditor } from '../components/ui/Loaders'
 import {
   LuArrowLeft,
   LuArrowRight,
@@ -25,6 +26,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import LoginModal from '../components/LoginModal'
 import Modal from '../components/Modal'
 import GoToTop from '../components/ui/GoToTop'
+
+const ChatWidget = lazy(() => import('../components/chat/ChatWidget')) // chat code is only downloaded for students who open a lesson
 import { useToast } from '../components/Toast'
 import CourseTree from '../components/student/CourseTree'
 import StudentHeader from '../components/student/StudentHeader'
@@ -42,7 +45,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePrefs } from '../context/PrefsContext'
 import { frameProps } from '../lib/blockRender'
 import { flatChapters } from '../lib/content'
-import { chapterProgress, visibleContent } from '../lib/progress'
+import { chapterProgress, overallProgress, visibleContent } from '../lib/progress'
 import {
   buildReadingRecord,
   getSavedReadingForChapter,
@@ -54,7 +57,9 @@ import { isAdminRole, isStaffRole } from '../services/authService'
 import { loadDraft, loadPublished } from '../services/contentService'
 import { syllabusFilesOf } from '../services/portalService'
 import { getPortal } from '../services/portalService'
-import { enroll, loadStudentData, saveStudentData } from '../services/studentService'
+import { enroll, loadStudentData, saveStudentData, syncEnrollmentProgress } from '../services/studentService'
+import { averageScore } from '../lib/activity'
+import { sendNotification } from '../services/notificationService'
 import { downloadChapterPdf, requestFrameSnapshots } from '../lib/pdfExport'
 
 /** Marks a block complete once the reader reaches its end */
@@ -306,6 +311,13 @@ export default function LessonPage() {
 
   const content = useMemo(() => (raw ? visibleContent(raw) : null), [raw])
   const flat = useMemo(() => (content ? flatChapters(content) : []), [content])
+
+  // Summary of this student's progress for the teacher dashboard (debounced, only when it changes)
+  useEffect(() => {
+    if (isDraft || !content || !sd || !portal || !user) return undefined
+    const t = setTimeout(() => syncEnrollmentProgress(user, portal, { pct: overallProgress(content, sd.completed).pct, avgScore: averageScore(sd.scores) }), 2500)
+    return () => clearTimeout(t)
+  }, [isDraft, content, sd, portal, user])
   const unitFirstChapterId = requestedUnitId
     ? flat.find((x) => x.unit.id === requestedUnitId || x.unit.slug === requestedUnitId)?.chapter.id
     : null
@@ -558,6 +570,10 @@ export default function LessonPage() {
       },
     }))
     toast(`Exam submitted — ${r.score}/${r.total} (${r.percent}%)`)
+    // only when the teacher switched on "notify me when a student submits an exam"
+    if (!isDraft && portal?.notifyExamSubmit && portal.ownerId) {
+      sendNotification({ recipientUid: portal.ownerId, kind: 'exam', title: 'Exam submitted', body: `${user.name || 'A student'} scored ${r.percent}% in "${block.data?.title || 'an exam'}" · ${portal.name}`, link: '/admin/reports', portalId: portal.id, actor: user })
+    }
   }
 
   // Change 3: Save PDF of current chapter
@@ -645,7 +661,7 @@ export default function LessonPage() {
       <div className="st-shell">
         <div className="st-center-msg">
           {state === 'loading' ? (
-            <span className="spinner-border text-info" />
+            <SkeletonEditor />
           ) : (
             <>
               <LuCircleAlert className="fs-1 text-warning" />
@@ -973,6 +989,18 @@ export default function LessonPage() {
             )}
           </div>
         </main>
+
+        {!isDraft && user && cur && portal?.ownerId && user.uid !== portal.ownerId && (
+          <Suspense fallback={null}>
+            <ChatWidget
+              key={portal.id}
+              user={user}
+              portal={portal}
+              autoOpen={params.get('chat') === '1'}
+              context={{ unitId: cur.unit.id, unitTitle: cur.unit.title, chapterId: cur.chapter.id, chapterTitle: cur.chapter.title }}
+            />
+          </Suspense>
+        )}
 
         {toolsDrawerOpen && (
           <div

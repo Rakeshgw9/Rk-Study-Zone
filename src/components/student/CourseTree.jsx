@@ -80,7 +80,7 @@ export default function CourseTree({ portal, content, done, currentId, onOpen, o
       <div className={`st-scrim ${open ? 'show' : ''}`} onClick={onClose} aria-hidden="true" />
       <aside className={`st-tree ${open ? 'open' : ''}`} aria-label="Course content">
         <div className="st-course">
-          {portal.coverUrl ? <img src={portal.coverUrl} alt="" /> : <span className="ph"><IconOf name="book" /></span>}
+          {portal.coverUrl ? <img src={portal.coverUrl} alt="" loading="lazy" decoding="async" width="64" height="64" /> : <span className="ph"><IconOf name="book" /></span>}
           <div className="min-w-0 flex-grow-1"><b title={portal.name}>{portal.name}</b><small>{plural(content.units.length, 'unit')}</small></div>
           {headRight}
           <button className="icon-mini d-xl-none" onClick={onClose} aria-label="Close course content"><LuX /></button>

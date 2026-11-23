@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuBell, LuBookmark, LuBookOpen, LuChartColumn, LuChevronDown, LuClipboardList, LuEllipsisVertical, LuHouse, LuLayoutDashboard, LuLogOut, LuMoon, LuNotebookPen, LuSearch, LuSun, LuTarget, LuUser } from 'react-icons/lu'
 import { useNavigate } from 'react-router-dom'
+import NotificationBell from '../NotificationBell'
 import { useTheme } from '../../context/ThemeContext'
 import { isStaffRole, logout, roleLabel } from '../../services/authService'
 
@@ -40,14 +41,14 @@ export default function StudentHeader({ title = 'RK Study Zone', subtitle = 'Lea
         <div className="d-flex align-items-center gap-2 ms-auto">
           {onSearch && <div className="st-search d-none d-md-flex"><LuSearch /><input placeholder="Search chapters…" value={search} onChange={(e) => onSearch(e.target.value)} aria-label="Search chapters" /></div>}
           <button className="icon-btn d-none d-lg-inline-flex" onClick={toggle} aria-label="Toggle theme">{theme === 'dark' ? <LuMoon /> : <LuSun />}</button>
-          <button className="icon-btn position-relative d-none d-lg-inline-flex" aria-label="Notifications"><LuBell /><span className="bell-dot" /></button>
+          <NotificationBell variant="student" className="d-none d-lg-inline-flex" />
           <div className="position-relative d-lg-none st-more" ref={moreRef}>
             <button className="icon-btn" onClick={() => setMoreOpen((o) => !o)} aria-label="More" aria-haspopup="true" aria-expanded={moreOpen}><LuEllipsisVertical /></button>
             {moreOpen && (
               <div className="user-menu st-more-menu" role="menu">
                 {onSearch && <div className="st-more-search d-md-none"><LuSearch /><input placeholder="Search chapters…" value={search} onChange={(e) => onSearch(e.target.value)} aria-label="Search chapters" /></div>}
                 <button role="menuitem" onClick={() => { setMoreOpen(false); toggle() }}>{theme === 'dark' ? <LuSun /> : <LuMoon />} {theme === 'dark' ? 'Light theme' : 'Dark theme'}</button>
-                <button role="menuitem" onClick={() => setMoreOpen(false)}><LuBell /> Notifications</button>
+                <button role="menuitem" onClick={() => { setMoreOpen(false); navigate('/notifications') }}><LuBell /> Notifications</button>
                 <button role="menuitem" onClick={() => { setMoreOpen(false); onNav('bookmarks') }}><LuBookmark /> Bookmarks</button>
                 <button role="menuitem" onClick={() => { setMoreOpen(false); onNav('home') }}><LuHouse /> Dashboard</button>
               </div>

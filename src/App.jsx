@@ -3,20 +3,27 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from './components/Toast'
 import { ConfirmProvider } from './components/ui/Confirm'
 import { AuthProvider } from './context/AuthContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import { PrefsProvider } from './context/PrefsContext'
 import { ThemeProvider } from './context/ThemeContext'
-import AdminLayout from './pages/AdminLayout'
-import DashboardPage from './pages/DashboardPage'
+import { PageLoader } from './components/ui/Loaders'
+import UploadActivityBar from './components/ui/UploadActivityBar'
 import HomeRedirect from './pages/HomeRedirect'
 import Landing from './pages/Landing'
-import PortalsPage from './pages/PortalsPage'
-import ReportsPage from './pages/ReportsPage'
-import SettingsPage from './pages/SettingsPage'
 
+// Route-level code splitting: the landing page and /learn no longer download the admin screens.
+const AdminLayout = lazy(() => import('./pages/AdminLayout'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const PortalsPage = lazy(() => import('./pages/PortalsPage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const BuilderPage = lazy(() => import('./pages/BuilderPage'))
 const LessonPage = lazy(() => import('./pages/LessonPage'))
 const StudentHome = lazy(() => import('./pages/StudentHome'))
-const Loader = () => <div className="page-loader"><span className="spinner-border text-info" /></div>
+const StudentNotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const AdminNotificationsPage = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.AdminNotificationsPage })))
+const MessagesPage = lazy(() => import('./pages/MessagesPage'))
+const Loader = () => <PageLoader />
 
 export default function App() {
   return (
@@ -24,8 +31,10 @@ export default function App() {
       <PrefsProvider>
       <AuthProvider>
         <ToastProvider>
+          <NotificationsProvider>
           <ConfirmProvider>
             <HashRouter>
+              <UploadActivityBar />
               <Suspense fallback={<Loader />}>
               <Routes>
                 <Route path="/" element={<Landing />} />
@@ -37,8 +46,12 @@ export default function App() {
                   <Route path="portals/:portalId" element={<LegacyRedirect />} />
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="settings" element={<SettingsPage />} />
+                  <Route path="notifications" element={<AdminNotificationsPage />} />
+                  <Route path="messages" element={<MessagesPage />} />
+                  <Route path="messages/:threadId" element={<MessagesPage />} />
                 </Route>
                 <Route path="/admin/builder/:portalId" element={<BuilderPage />} />
+                <Route path="/notifications" element={<StudentNotificationsPage />} />
                 <Route path="/learn" element={<StudentHome />} />
                 <Route path="/learn/:portalId" element={<LessonPage />} />
                 <Route path="/learn/:portalId/:chapterId" element={<LessonPage />} />
@@ -47,6 +60,7 @@ export default function App() {
               </Suspense>
             </HashRouter>
           </ConfirmProvider>
+          </NotificationsProvider>
         </ToastProvider>
       </AuthProvider>
       </PrefsProvider>

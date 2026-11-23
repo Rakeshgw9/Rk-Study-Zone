@@ -40,6 +40,10 @@ service cloud.firestore {
       allow read, write: if canEditPortal(portalId);
       match /chapters/{chapterId} {
         allow read, write: if canEditPortal(portalId);
+        // Phase A: extra "parts" of a very large chapter (same access as the chapter itself)
+        match /parts/{partId} {
+          allow read, write: if canEditPortal(portalId);
+        }
       }
     }
 
@@ -50,6 +54,11 @@ service cloud.firestore {
       match /chapters/{chapterId} {
         allow read: if signedIn();
         allow write: if canEditPortal(portalId);
+        // Phase A: extra "parts" of a very large chapter (students read, portal owner/admin write)
+        match /parts/{partId} {
+          allow read: if signedIn();
+          allow write: if canEditPortal(portalId);
+        }
       }
     }
 
@@ -74,6 +83,157 @@ service cloud.firestore {
         && request.resource.data.portalId == resource.data.portalId
         && request.resource.data.ownerId == resource.data.ownerId;
       allow delete: if isAdmin();
+    }
+
+    // ---- Notifications (Phase C) ----
+    // A person's own inbox: users/{uid}/notifications/{id}. Only the owner reads / marks read / deletes.
+    // Others may CREATE a notice for that person only in two narrow cases (kinds "enrol" and "exam"): the sender is a student who
+    // really is enrolled in the portal, and the recipient is that portal's owner. Text sizes are capped. Chat notices (kind "chat") are allowed only between the two sides of an existing chat thread (see chatThreads below).
+    match /users/{uid}/notifications/{nid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      // shape + size limits shared by every kind
+      function shapeOk() {
+        return request.resource.data.keys().hasOnly(['kind', 'title', 'body', 'link', 'portalId', 'actorUid', 'actorName', 'read', 'createdAt', 'expireAt'])
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.read == false
+          && request.resource.data.title is string && request.resource.data.title.size() <= 120
+          && request.resource.data.body is string && request.resource.data.body.size() <= 300
+          && request.resource.data.link is string && request.resource.data.link.size() <= 200
+          && request.resource.data.portalId is string;
+      }
+      // student → portal owner ("enrol" / "exam"): the sender really is enrolled in that portal
+      function enrolOrExam() {
+        return request.resource.data.kind in ['enrol', 'exam']
+          && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + request.resource.data.portalId))
+          && get(/databases/$(database)/documents/portals/$(request.resource.data.portalId)).data.ownerId == uid;
+      }
+      // chat notice (Phase D): only between the two sides of an existing chat thread
+      function chatNotice() {
+        return request.resource.data.kind == 'chat'
+          && (
+            // student → teacher: the sender's own thread, and the recipient is that thread's teacher
+            (exists(/databases/$(database)/documents/chatThreads/$(request.resource.data.portalId + '_' + request.auth.uid))
+              && get(/databases/$(database)/documents/chatThreads/$(request.resource.data.portalId + '_' + request.auth.uid)).data.teacherUid == uid)
+            // teacher / admin → student: the recipient's own thread, and the sender is its teacher or an admin
+            || (exists(/databases/$(database)/documents/chatThreads/$(request.resource.data.portalId + '_' + uid))
+              && get(/databases/$(database)/documents/chatThreads/$(request.resource.data.portalId + '_' + uid)).data.studentUid == uid
+              && (get(/databases/$(database)/documents/chatThreads/$(request.resource.data.portalId + '_' + uid)).data.teacherUid == request.auth.uid || isAdmin()))
+          );
+      }
+      allow create: if signedIn() && shapeOk() && (enrolOrExam() || chatNotice());
+    }
+
+    // Per-user notification settings: last seen time, read feed items, joined portals, mute switches. Private to the user.
+    match /notificationState/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // One content-update item per publish. The portal owner / admins write; only enrolled students (and the owner / admins) read.
+    // The parent document holds the compact signature of the last publish (used to compute the next diff) — staff only.
+    match /portalUpdates/{portalId} {
+      allow read, write: if canEditPortal(portalId);
+      match /items/{itemId} {
+        allow read: if canEditPortal(portalId)
+          || (signedIn() && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + portalId)));
+        allow create, update, delete: if canEditPortal(portalId);
+      }
+    }
+
+    // ---- Live chat (Phase D) ----
+    // chatThreads/{portalId}_{studentUid}: ONE thread per student per portal.
+    //   Read:   the student of the thread, the portal's teacher (teacherUid) and admins. Nobody else — not other students, not other teachers.
+    //   Create: only the student, only for their own id, only if enrolled in that portal, and teacherUid must be the portal's owner.
+    //   Update: each side may change only its own fields (student: its unread/read/typing fields, status, context, last message;
+    //           teacher/admin: the same for the teacher side). The OTHER side's counter may only go up by 1 per write; your own counter may only go down.
+    //   Delete: nobody.
+    match /chatThreads/{threadId} {
+      function threadKeys() {
+        return ['portalId', 'portalName', 'studentUid', 'studentName', 'teacherUid', 'status', 'lastMessage', 'lastMessageAt', 'lastSender',
+                'unreadForTeacher', 'unreadForStudent', 'readByStudentAt', 'readByTeacherAt', 'typingStudentAt', 'typingTeacherAt', 'context'];
+      }
+      function isStudent() { return signedIn() && resource.data.studentUid == request.auth.uid; }
+      function isTeacherSide() { return signedIn() && (resource.data.teacherUid == request.auth.uid || isAdmin()); }
+      function d() { return request.resource.data; }
+      function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+      // before the student's first question the thread does not exist yet: a student may listen to their OWN (still empty) thread id
+      allow read: if (resource == null && signedIn() && threadId.matches('.*_' + request.auth.uid))
+        || isStudent() || isTeacherSide();
+      allow create: if signedIn()
+        && d().keys().hasOnly(threadKeys())
+        && d().studentUid == request.auth.uid
+        && threadId == d().portalId + '_' + request.auth.uid
+        && d().teacherUid == get(/databases/$(database)/documents/portals/$(d().portalId)).data.ownerId
+        && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + d().portalId))
+        && d().status == 'open' && d().lastSender == 'student'
+        && d().unreadForTeacher == 1 && d().unreadForStudent == 0
+        && d().lastMessage is string && d().lastMessage.size() <= 200;
+      allow update: if
+        (isStudent()
+          && changed().hasOnly(['status', 'lastMessage', 'lastMessageAt', 'lastSender', 'unreadForTeacher', 'unreadForStudent', 'readByStudentAt', 'typingStudentAt', 'context'])
+          && d().unreadForStudent <= resource.data.unreadForStudent
+          && d().unreadForTeacher - resource.data.unreadForTeacher >= 0 && d().unreadForTeacher - resource.data.unreadForTeacher <= 1
+          && (!('lastSender' in changed()) || d().lastSender == 'student')
+          && (!('lastMessage' in changed()) || (d().lastMessage is string && d().lastMessage.size() <= 200)))
+        ||
+        (isTeacherSide()
+          && changed().hasOnly(['status', 'lastMessage', 'lastMessageAt', 'lastSender', 'unreadForTeacher', 'unreadForStudent', 'readByTeacherAt', 'typingTeacherAt'])
+          && d().unreadForTeacher <= resource.data.unreadForTeacher
+          && d().unreadForStudent - resource.data.unreadForStudent >= 0 && d().unreadForStudent - resource.data.unreadForStudent <= 1
+          && (!('lastSender' in changed()) || d().lastSender == 'teacher')
+          && (!('lastMessage' in changed()) || (d().lastMessage is string && d().lastMessage.size() <= 200)));
+      allow delete: if false;
+
+      // Messages are append-only: nobody can edit or delete a message, so no one can change another person's words.
+      match /messages/{messageId} {
+        function thread() { return get(/databases/$(database)/documents/chatThreads/$(threadId)).data; }
+        // getAfter: the thread may be created in the same batch as its first message
+        function threadAfter() { return getAfter(/databases/$(database)/documents/chatThreads/$(threadId)).data; }
+        allow read: if signedIn() && (
+          (exists(/databases/$(database)/documents/chatThreads/$(threadId))
+            && (thread().studentUid == request.auth.uid || thread().teacherUid == request.auth.uid || isAdmin()))
+          // empty history of the student's own, not-yet-created thread
+          || (!exists(/databases/$(database)/documents/chatThreads/$(threadId)) && threadId.matches('.*_' + request.auth.uid)));
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['senderUid', 'senderRole', 'text', 'imageUrl', 'context', 'createdAt'])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() <= 1000
+          && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 500000
+          && (request.resource.data.text.size() > 0 || request.resource.data.imageUrl.size() > 0)
+          && (
+            (request.resource.data.senderRole == 'student' && threadAfter().studentUid == request.auth.uid)
+            || (request.resource.data.senderRole == 'teacher' && (threadAfter().teacherUid == request.auth.uid || isAdmin()))
+          );
+        allow update, delete: if false;
+      }
+    }
+
+    // ---- portalActivity — small per-day counters for the teacher's live chart (Phase B) ----
+    // Teachers/admins of the portal read them. Any signed-in student may only ADD +1 to a counter per write
+    // (cannot rewrite or lower it) and only the known fields. Informational data, not security-critical.
+    match /portalActivity/{portalId} {
+      match /days/{day} {
+        function inc(f) {
+          return request.resource.data.get(f, 0) - (resource == null ? 0 : resource.data.get(f, 0));
+        }
+        allow read: if canEditPortal(portalId);
+        allow create, update: if signedIn()
+          && request.resource.data.keys().hasOnly(['day', 'enrolments', 'active', 'completions', 'updatedAt'])
+          && request.resource.data.day == day
+          && inc('enrolments') >= 0 && inc('enrolments') <= 1
+          && inc('active') >= 0 && inc('active') <= 1
+          && inc('completions') >= 0 && inc('completions') <= 1;
+        // one marker per student per day → makes "active today" count each student once (create-only)
+        match /actives/{uid} {
+          allow create: if signedIn() && request.auth.uid == uid;
+        }
+      }
+      // one marker per student → a completion is counted once (create-only)
+      match /completers/{uid} {
+        allow create: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     // ---- studentData/{uid}_{portalId} — progress, notes, bookmarks, test results ----

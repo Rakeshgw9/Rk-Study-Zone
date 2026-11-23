@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { LuArrowRight, LuBookmark, LuBookOpen, LuChartColumn, LuCircleAlert, LuSearch, LuTrophy } from 'react-icons/lu'
+import { PageLoader } from '../components/ui/Loaders'
+import { LuArrowRight, LuBookmark, LuBookOpen, LuChartColumn, LuCircleAlert, LuInfo, LuSearch, LuTrophy } from 'react-icons/lu'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import StudentHeader from '../components/student/StudentHeader'
 import { portalVisual } from '../components/portalIcon'
@@ -9,6 +10,11 @@ import { overallProgress, visibleContent } from '../lib/progress'
 import { loadPublished } from '../services/contentService'
 import { listActivePortals } from '../services/portalService'
 import { plural } from '../lib/blockLabel'
+import PortalDetailsModal from '../components/student/PortalDetailsModal'
+import StudentOverview from '../components/student/StudentOverview'
+import TeacherBadge from '../components/student/TeacherBadge'
+import { createdAtOf, facets, filterPortals, SORTS, updatedAtOf } from '../lib/portalDiscovery'
+import { CATEGORIES } from '../services/portalService'
 import { loadStudentData } from '../services/studentService'
 
 export default function StudentHome() {
@@ -19,6 +25,8 @@ export default function StudentHome() {
   const [items, setItems] = useState(null)
   const [err, setErr] = useState(false)
   const [q, setQ] = useState('')
+  const [flt, setFlt] = useState({ specialization: '', category: '', teacher: '', sort: 'updated' })
+  const [details, setDetails] = useState(null)
 
   useEffect(() => {
     if (!user) return
@@ -40,8 +48,10 @@ export default function StudentHome() {
     return () => { alive = false }
   }, [user])
 
-  const filtered = useMemo(() => (items || []).filter((x) => !q || x.portal.name.toLowerCase().includes(q.toLowerCase())), [items, q])
-  if (loading) return <div className="page-loader"><span className="spinner-border text-info" /></div>
+  const filtered = useMemo(() => filterPortals(items || [], { search: q, ...flt }), [items, q, flt])
+  const fac = useMemo(() => facets(items || []), [items])
+  const dateFmt = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '')
+  if (loading) return <PageLoader />
   if (!user) return <Navigate to="/" replace />
 
   const onNav = (k) => setParams(k === 'progress' || k === 'bookmarks' ? { tab: k } : k === 'notes' ? { tab: 'bookmarks' } : k === 'practice' || k === 'mock' ? { tab: 'progress' } : {})
@@ -61,24 +71,46 @@ export default function StudentHome() {
             <button key={k} role="tab" aria-selected={active === k} className={`ui-tab ${active === k ? 'on' : ''}`} onClick={() => onNav(k)}><I /> <span>{l}</span></button>
           ))}
         </div>
+        {items?.length > 0 && active === 'courses' && <StudentOverview items={items} onOpen={open} onDetails={setDetails} />}
+        {items?.length > 0 && active === 'courses' && (
+          <div className="st-filters" role="search" aria-label="Filter courses">
+            <select className="form-select" aria-label="Specialization" value={flt.specialization} onChange={(e) => setFlt((f) => ({ ...f, specialization: e.target.value }))}>
+              <option value="">All specializations</option>{fac.specializations.map((s) => <option key={s}>{s}</option>)}
+            </select>
+            <select className="form-select" aria-label="Category" value={flt.category} onChange={(e) => setFlt((f) => ({ ...f, category: e.target.value }))}>
+              <option value="">All categories</option>{fac.categories.map((c) => <option key={c} value={c}>{CATEGORIES.find((x) => x.value === c)?.label || c}</option>)}
+            </select>
+            <select className="form-select" aria-label="Teacher" value={flt.teacher} onChange={(e) => setFlt((f) => ({ ...f, teacher: e.target.value }))}>
+              <option value="">All teachers</option>{fac.teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select className="form-select" aria-label="Sort by" value={flt.sort} onChange={(e) => setFlt((f) => ({ ...f, sort: e.target.value }))}>
+              {SORTS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </div>
+        )}
         {items === null ? <div className="row g-3">{[1, 2, 3].map((i) => <div key={i} className="col-md-6 col-lg-4"><div className="skeleton-card" /></div>)}</div>
           : err ? <div className="st-empty"><LuCircleAlert /> Could not load courses. Please try again.</div>
-            : filtered.length === 0 ? <div className="st-empty"><LuBookOpen /><b>No courses available yet</b><span>Published study portals will appear here.</span></div>
+            : filtered.length === 0 ? <div className="st-empty"><LuBookOpen /><b>{items.length ? 'No courses match your filters' : 'No courses available yet'}</b><span>{items.length ? 'Try clearing the search or a filter.' : 'Published study portals will appear here.'}</span></div>
               : active === 'courses' ? (
                 <div className="row g-3">
                   {filtered.map((x) => {
                     const { Icon, tone } = portalVisual(x.portal)
                     return (
                       <div key={x.portal.id} className="col-md-6 col-lg-4">
-                        <button className="course-card" onClick={() => open(x)}>
-                          <div className={`cc-cover tone-${tone}`}>{x.portal.coverUrl ? <img src={x.portal.coverUrl} alt="" /> : <Icon />}</div>
-                          <div className="cc-body">
-                            <b>{x.portal.name}</b>
-                            <small>{plural(x.content.units.length, 'unit')} · {plural(x.chapters, 'chapter')}</small>
-                            <div className="bar my-2"><span style={{ width: `${x.prog.pct}%` }} /></div>
-                            <div className="d-flex justify-content-between align-items-center"><span className="small text-soft">{x.prog.pct}% complete</span><span className="cc-go">{x.prog.done ? 'Continue' : 'Start'} <LuArrowRight /></span></div>
-                          </div>
-                        </button>
+                        <div className="course-card course-card-rich">
+                          <button type="button" className="cc-main" onClick={() => open(x)} aria-label={`Open ${x.portal.name}`}>
+                            <div className={`cc-cover tone-${tone}`}>{x.portal.coverUrl ? <img src={x.portal.coverUrl} alt="" loading="lazy" decoding="async" width="320" height="180" /> : <Icon />}</div>
+                            <div className="cc-body">
+                              <b>{x.portal.name}</b>
+                              <TeacherBadge portal={x.portal} />
+                              <small>{plural(x.content.units.length, 'unit')} · {plural(x.chapters, 'chapter')}{x.portal.accessType && x.portal.accessType !== 'free' ? ` · ${x.portal.accessType}` : ''}</small>
+                              <small className="cc-dates">Created {dateFmt(createdAtOf(x.portal)) || '—'} · Updated {dateFmt(updatedAtOf(x.portal)) || '—'}</small>
+                              <div className="bar my-2"><span style={{ width: `${x.prog.pct}%` }} /></div>
+                              <div className="d-flex justify-content-between align-items-center"><span className="small text-soft">{x.prog.pct}% complete</span><span className="cc-go">{x.prog.done ? 'Continue' : 'Start'} <LuArrowRight /></span></div>
+                            </div>
+                          </button>
+                          <button type="button" className="cc-info" onClick={() => setDetails(x)} aria-label={`Details of ${x.portal.name}`} title="Portal details"><LuInfo /></button>
+                        </div>
                       </div>
                     )
                   })}
@@ -114,6 +146,7 @@ export default function StudentHome() {
                 </div>
               )}
       </main>
+      <PortalDetailsModal item={details} onClose={() => setDetails(null)} onOpen={(x) => { setDetails(null); open(x) }} />
     </div>
   )
 }

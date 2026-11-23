@@ -7,6 +7,10 @@ import './styles/cms.css'
 import './styles/editors.css'
 import './styles/changes9.css'
 import './styles/jsonStudio.css'
+import './styles/phaseA.css'
+import './styles/phaseB.css'
+import './styles/phaseC.css'
+import './styles/phaseD.css'
 import App from './App.jsx'
 
 

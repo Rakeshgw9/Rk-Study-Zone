@@ -8,9 +8,14 @@ import { useTheme } from '../context/ThemeContext'
 import { firebaseProjectId, isFirebaseConfigured } from '../firebase/config'
 import { isAdminRole, isStaffRole, resetPassword, roleLabel, updateUserProfile } from '../services/authService'
 import { checkMediaStorage } from '../services/mediaService'
+import TeacherProfileFields from '../components/TeacherProfileFields'
+import NotificationPrefs from '../components/NotificationPrefs'
+import { ProgressButton } from '../components/ui/Loaders'
+import { validateProfile } from '../lib/profile'
+import { syncOwnerIdentity } from '../services/portalService'
 import { listUsers, setUserRole } from '../services/userService'
 
-const DETAIL_KEYS = ['phone', 'altEmail', 'institution', 'address', 'city', 'state', 'pincode', 'bio']
+const DETAIL_KEYS = ['phone', 'altEmail', 'institution', 'address', 'city', 'state', 'pincode', 'bio', 'specialization', 'qualification', 'experienceYears', 'subjects', 'languages', 'availability', 'website']
 const pickDetails = (u) => Object.fromEntries(DETAIL_KEYS.map((k) => [k, u?.[k] || '']))
 
 const ROLES = [
@@ -29,6 +34,8 @@ export default function SettingsPage() {
   const [q, setQ] = useState('')
   const [name, setName] = useState(user?.name || '')
   const [savingProf, setSavingProf] = useState(false)
+  const [profProgress, setProfProgress] = useState(null)
+  const [profErrors, setProfErrors] = useState({})
   const photoInputRef = useRef(null)
   const admin = isAdminRole(user.role)
   const staff = isStaffRole(user.role)
@@ -42,7 +49,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setDetails(pickDetails(user))
-  }, [user?.phone, user?.altEmail, user?.institution, user?.address, user?.city, user?.state, user?.pincode, user?.bio]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.phone, user?.altEmail, user?.institution, user?.address, user?.city, user?.state, user?.pincode, user?.bio, user?.specialization, user?.qualification, user?.experienceYears, user?.subjects, user?.languages, user?.availability, user?.website]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const runMediaCheck = async () => {
     setMedia('checking')
@@ -100,14 +107,30 @@ export default function SettingsPage() {
     if (!name.trim()) return toast('Please enter your name', 'error')
     if (details.altEmail && !/^\S+@\S+\.\S+$/.test(details.altEmail)) return toast('Please enter a valid alternative email.', 'error')
     if (details.phone && !/^[+\d][\d\s-]{6,18}$/.test(details.phone)) return toast('Please enter a valid phone number.', 'error')
+    let clean = details
+    let cleanName = name.trim()
+    if (staff) {
+      const v = validateProfile({ ...details, name }, user.role)
+      setProfErrors(v.errors)
+      if (!v.ok) return toast(Object.values(v.errors)[0], 'error')
+      const { name: n, ...rest } = v.values
+      cleanName = n
+      clean = { ...details, ...rest }
+    }
     setSavingProf(true)
     try {
-      await updateUserProfile({ name: name.trim(), details })
+      const updated = await updateUserProfile({ name: cleanName, details: clean })
       toast('Profile updated successfully!')
+      if (staff) {
+        // keep the teacher identity on the portals in step with the profile (batched, with progress)
+        const n = await syncOwnerIdentity({ ...(updated || user), name: cleanName, ...clean }, { onProgress: (p) => setProfProgress(p) })
+        if (n) toast(`Updated your teacher details on ${n} portal${n === 1 ? '' : 's'}`)
+      }
     } catch (err) {
       toast(err.message || 'Could not update profile', 'error')
     } finally {
       setSavingProf(false)
+      setProfProgress(null)
     }
   }
 
@@ -235,18 +258,26 @@ export default function SettingsPage() {
                   <label className="ui-label" htmlFor="st-pin">PIN Code</label>
                   <input id="st-pin" className="ui-input" inputMode="numeric" value={details.pincode} onChange={setD('pincode')} maxLength={12} />
                 </div>
+                {staff && (
+                  <div className="col-12">
+                    <h3 className="h6 fw-semibold mt-2 mb-2">Teacher profile <small className="text-muted-soft fw-normal">· shown to students</small></h3>
+                    <TeacherProfileFields values={details} errors={profErrors} full showName={false} idPrefix="stp" requireSpecialization={user.role === 'teacher'}
+                      onChange={(k, v) => setDetails((d) => ({ ...d, [k]: v }))} />
+                  </div>
+                )}
                 <div className="col-12">
                   <label className="ui-label" htmlFor="st-bio">About me</label>
                   <textarea id="st-bio" className="ui-input ui-textarea" rows={2} value={details.bio} onChange={setD('bio')} placeholder="A short introduction (optional)" maxLength={400} />
                 </div>
               </div>
               <div className="d-flex justify-content-end mt-3">
-                <button type="submit" className="btn ui-btn ui-btn-primary btn-sm px-3" disabled={savingProf || !dirty}>
-                  <LuSave /> Save Profile
-                </button>
+                <ProgressButton type="submit" className="btn ui-btn ui-btn-primary btn-sm px-3" busy={savingProf} pct={profProgress} busyLabel="Saving…" icon={<LuSave />} disabled={!dirty}>
+                  Save Profile
+                </ProgressButton>
               </div>
             </form>
 
+            <div className="mb-3"><NotificationPrefs staff={staff} /></div>
             <dl className="kv">
               <dt>Email</dt><dd>{user.email}</dd>
               <dt>Role</dt><dd><span className="role-pill">{roleLabel(user.role)}</span></dd>

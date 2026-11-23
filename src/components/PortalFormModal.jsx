@@ -182,6 +182,11 @@ export default function PortalFormModal({ show, onClose, user, portal }) {
                 <LuChevronDown className="select-caret" />
               </div>
               {errors.accessType && <div className="field-error">{errors.accessType}</div>}
+              {form.accessType && (
+                <small className="text-muted-soft d-block mt-1" id="pf-access-help">
+                  {{ free: 'Students sign in and join by themselves. The portal link works for everyone who signs in.', paid: 'Students must enrol before they can read. Share the link after they have paid or been approved.', private: 'Only students you invite (link or code) should receive the link.' }[form.accessType]}
+                </small>
+              )}
             </div>
 
             <div className="col-md-6">

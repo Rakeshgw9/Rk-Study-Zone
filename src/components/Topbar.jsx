@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { LuBell, LuChevronDown, LuLogOut, LuMenu, LuSearch, LuSettings, LuUser } from 'react-icons/lu'
+import NotificationBell from './NotificationBell'
+import { LuChevronDown, LuLogOut, LuMenu, LuSearch, LuSettings, LuUser } from 'react-icons/lu'
 import { useNavigate } from 'react-router-dom'
 import Logo from './Logo'
 import { isAdminRole, roleLabel as labelOf } from '../services/authService'
@@ -40,9 +41,7 @@ export default function Topbar({ user, search, onSearch, onMenu, onLogout }) {
 
       <div className="d-flex align-items-center gap-2 gap-md-3">
         <button className="icon-btn" onClick={toggle} aria-label="Toggle theme">{theme === 'dark' ? <LuMoon /> : <LuSun />}</button>
-        <button className="icon-btn position-relative d-none d-sm-inline-flex" aria-label="Notifications">
-          <LuBell /><span className="bell-dot" />
-        </button>
+        <NotificationBell variant="admin" />
         <div className="position-relative" ref={ref}>
           <button className="user-chip" onClick={() => setMenuOpen((o) => !o)} aria-expanded={menuOpen}>
             <span className="avatar">

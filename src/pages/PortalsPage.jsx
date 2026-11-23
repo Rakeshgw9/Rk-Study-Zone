@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import PublishedModal from '../components/PublishedModal'
+import ProfileCompleteModal from '../components/ProfileCompleteModal'
+import { needsTeacherProfile } from '../lib/profile'
 import { LuChevronDown, LuLayers, LuPlus, LuSearch } from 'react-icons/lu'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
@@ -6,7 +9,7 @@ import PortalFormModal from '../components/PortalFormModal'
 import PortalTable from '../components/PortalTable'
 import StatCards from '../components/StatCards'
 import { computeStats, deletePortal, duplicatePortal } from '../services/portalService'
-import { duplicateContent } from '../services/contentService'
+import { duplicateContent, loadPublished } from '../services/contentService'
 import { useConfirm } from '../components/ui/Confirm'
 import { useToast } from '../components/Toast'
 
@@ -14,6 +17,7 @@ export default function PortalsPage() {
   const { user, portals: rawPortals, portalsLoading, search, setSearch, enrollStats } = useOutletContext()
   const [status, setStatus] = useState('all')
   const [modal, setModal] = useState({ open: false, portal: null })
+  const [share, setShare] = useState(null) // { portal, content }
   const navigate = useNavigate()
   const confirm = useConfirm()
   const toast = useToast()
@@ -21,6 +25,14 @@ export default function PortalsPage() {
     const e = enrollStats?.byPortal?.[p.id]
     return e ? { ...p, studentsCount: e.students, enrollmentsCount: e.thisMonth, loginsToday: e.today } : p
   }), [rawPortals, enrollStats])
+  const onShare = async (p) => {
+    try {
+      const pub = await loadPublished(p.id)
+      setShare({ portal: p, content: pub || { units: [] } })
+    } catch (e) {
+      toast(e.message || 'Could not load the share links', 'error')
+    }
+  }
   const onDuplicate = async (p) => {
     try { const id = await duplicatePortal(p, user); await duplicateContent(p.id, id, user); toast('Portal duplicated as Draft') } catch (e) { toast(e.message || 'Could not duplicate', 'error') }
   }
@@ -36,7 +48,8 @@ export default function PortalsPage() {
       (!q || p.name.toLowerCase().includes(q) || p.slug.includes(q) || (p.description || '').toLowerCase().includes(q)))
   }, [portals, search, status])
 
-  const openCreate = () => setModal({ open: true, portal: null })
+  const [profileGate, setProfileGate] = useState(false)
+  const openCreate = () => (needsTeacherProfile(user) ? setProfileGate(true) : setModal({ open: true, portal: null }))
 
   return (
     <>
@@ -78,10 +91,20 @@ export default function PortalsPage() {
           </div>
           {filtered.length === 0
             ? <div className="glass-panel text-center py-5 text-muted-soft">No portals match “{search || status}”.</div>
-            : <PortalTable portals={filtered} onEdit={(p) => navigate(`/admin/builder/${p.id}`)} onOpen={(p) => window.open(`${window.location.pathname}#/learn/${p.id}${p.publishedAt ? '' : '?draft=1'}`, '_blank', 'noopener')} onDetails={(p) => setModal({ open: true, portal: p })} onDuplicate={onDuplicate} onDelete={onDelete} />}
+            : <PortalTable portals={filtered} onEdit={(p) => navigate(`/admin/builder/${p.id}`)} onOpen={(p) => window.open(`${window.location.pathname}#/learn/${p.id}${p.publishedAt ? '' : '?draft=1'}`, '_blank', 'noopener')} onDetails={(p) => setModal({ open: true, portal: p })} onShare={onShare} onDuplicate={onDuplicate} onDelete={onDelete} />}
         </>
       )}
 
+      <ProfileCompleteModal show={profileGate} onClose={() => setProfileGate(false)} onDone={() => setModal({ open: true, portal: null })} reason="Add your specialization before creating a portal — students see it on your portal card." />
+      <PublishedModal
+        show={!!share}
+        onClose={() => setShare(null)}
+        portal={share?.portal}
+        content={share?.content}
+        publishedAt={share?.portal?.publishedAt}
+        publishedBy={share?.portal?.ownerName}
+        justPublished={false}
+      />
       <PortalFormModal show={modal.open} portal={modal.portal} user={user} onClose={() => setModal({ open: false, portal: null })} />
     </>
   )

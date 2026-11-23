@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import {
   LuChevronDown,
   LuChevronRight,
   LuCircleAlert,
-  LuCircleCheck,
   LuCloudUpload,
   LuEllipsisVertical,
   LuEye,
   LuLayers,
   LuListTree,
-  LuLoaderCircle,
   LuLock,
   LuLogOut,
   LuMoon,
@@ -17,14 +15,23 @@ import {
   LuPanelRight,
   LuRotateCcw,
   LuSave,
+  LuShare2,
   LuSettings,
-  LuSquarePen,
   LuSun,
   LuUser,
 } from 'react-icons/lu'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { useToast } from '../components/Toast'
+import PublishedModal from '../components/PublishedModal'
+import ProfileCompleteModal from '../components/ProfileCompleteModal'
+import { needsTeacherProfile } from '../lib/profile'
+import SaveStatusChip from '../components/ui/SaveStatusChip'
+import SizeMeter from '../components/ui/SizeMeter'
+import Tooltip from '../components/ui/Tooltip'
+import { ProgressButton } from '../components/ui/Loaders'
+import { byteLength } from '../lib/sizeMeter'
+import { progressLabel } from '../lib/saveStatus'
 import AddBlockModal from '../components/builder/AddBlockModal'
 import ChapterModal from '../components/builder/ChapterModal'
 import { HtmlCenter, HtmlProps } from '../components/builder/HtmlBlockEditor'
@@ -53,7 +60,8 @@ import { duplicateSectionById, editStudioJson, moveSectionIndex, removeSectionBy
 import { scrollToStudioSection } from '../lib/jsonStudioDom'
 import { validateQuestions } from '../lib/mcq'
 import { isAdminRole, isStaffRole, logout, roleLabel } from '../services/authService'
-import { loadDraft, publish, saveDraft } from '../services/contentService'
+import { loadDraft, loadPublished, publish, saveDraft } from '../services/contentService'
+import { getPreviousSignature, recordPublishUpdate } from '../services/notificationService'
 import { getPortal, patchPortal } from '../services/portalService'
 import { uploadImage } from '../services/storageService'
 
@@ -129,7 +137,9 @@ export default function BuilderPage() {
   const [mobileExpandedUnits, setMobileExpandedUnits] = useState({})
   const restoredLastEditedRef = useRef(false)
   const [, setPublishErrors] = useState(null)
-  const [, setPublishLinks] = useState(false)
+  const [publishInfo, setPublishInfo] = useState(null) // { justPublished, at } → "Portal Published" / "Share links" modal
+  const [profileGate, setProfileGate] = useState(false)
+  const [progress, setProgress] = useState(null) // 0-100 while saving / publishing, null when unknown
   const [insertAt, setInsertAt] = useState(null)
   const [leftHidden, setLeftHidden] = useState(false)
   const [rightHidden, setRightHidden] = useState(false)
@@ -220,22 +230,26 @@ export default function BuilderPage() {
     return contentRef.current
   }, [apply])
 
+  const doSaveRef = useRef(null)
   const doSave = useCallback(
     async (c = contentRef.current) => {
       setSave((s) => ({ ...s, status: 'saving' }))
       try {
-        const at = await saveDraft(portalId, c, user)
+        const at = await saveDraft(portalId, c, user, { onProgress: (pct) => setProgress(pct) })
         setSave({ status: 'saved', at })
         return true
       } catch (e) {
         console.error(e)
         setSave((s) => ({ ...s, status: 'error', error: e.message }))
-        toast(e.message || 'Could not save draft', 'error')
+        toast(e.message || 'Could not save draft', 'error', { action: { label: 'Retry', onClick: () => doSaveRef.current?.() } })
         return false
+      } finally {
+        setProgress(null)
       }
     },
     [portalId, user, toast]
   )
+  doSaveRef.current = doSave
 
   // Change 1: Persist last edited unitId & chapterId per portalId
   useEffect(() => {
@@ -263,16 +277,16 @@ export default function BuilderPage() {
   }, [version, doSave, prefs.autosaveMs])
 
   // warn before leaving with unsaved edits
-  const hasUnsaved = working?.dirty || save.status === 'unsaved' || save.status === 'saving'
+  const hasUnsaved = working?.dirty || save.status === 'unsaved' || save.status === 'saving' || save.status === 'error'
   useEffect(() => {
-    if (!hasUnsaved) return
+    if (!hasUnsaved && !busy) return
     const h = (e) => {
       e.preventDefault()
       e.returnValue = ''
     }
     window.addEventListener('beforeunload', h)
     return () => window.removeEventListener('beforeunload', h)
-  }, [hasUnsaved])
+  }, [hasUnsaved, busy])
 
   const flush = async () => {
     const c = commitWorking()
@@ -500,6 +514,8 @@ export default function BuilderPage() {
     () => unit?.chapters.find((c) => c.id === sel.chapterId),
     [unit, sel.chapterId]
   )
+  const deferredBlocks = useDeferredValue(chapter?.blocks)
+  const chapterBytes = useMemo(() => (deferredBlocks ? byteLength(deferredBlocks) : 0), [deferredBlocks])
   const block = working?.block && chapter?.blocks.some((b) => b.id === working.block.id) ? working.block : null
 
   /* ---------- scroll-spy with IntersectionObserver (updates tree only) ---------- */
@@ -768,6 +784,7 @@ export default function BuilderPage() {
   /* ---------- header actions ---------- */
   const onSaveDraft = async () => {
     setBusy('save')
+    setProgress(null)
     if (await flush()) toast('Draft saved')
     setBusy('')
   }
@@ -780,10 +797,15 @@ export default function BuilderPage() {
     window.open(`${window.location.pathname}#/learn/${portalId}${ch}?draft=1`, '_blank', 'noopener')
   }
 
+  const onPublishRef = useRef(null)
   const onPublish = async () => {
+    if (needsTeacherProfile(user)) return setProfileGate(true)
     const c = commitWorking()
     const errs = validateContent(c)
-    if (errs.length) return setPublishErrors(errs)
+    if (errs.length) {
+      setPublishErrors(errs)
+      return toast(`Fix before publishing (${errs.length}): ${errs[0]}`, 'error')
+    }
     const ok = await confirm({
       title: 'Publish portal?',
       message: 'Students will see the current version of all units, chapters and visible blocks.',
@@ -791,18 +813,28 @@ export default function BuilderPage() {
     })
     if (!ok) return
     setBusy('publish')
+    setProgress(0)
     try {
-      const at = await publish(portalId, c, user)
+      // what students see right now — needed BEFORE it is overwritten, to describe what changed
+      const prev = await getPreviousSignature(portalId, () => loadPublished(portalId))
+      const at = await publish(portalId, c, user, { onProgress: (pct) => setProgress(pct) })
       if (portal.status !== 'active') await patchPortal(portalId, { status: 'active' })
       setPortal((p) => ({ ...p, publishedAt: at, status: 'active' }))
       setSave({ status: 'saved', at })
       toast('Portal published — students can see it now')
-      setPublishLinks(true)
+      setPublishInfo({ justPublished: true, at })
+      // content-update notice: one feed item per publish (never on autosave). A failure here must not undo the publish.
+      recordPublishUpdate({ portal, content: c, user, prev })
+        .then((r) => r?.created && toast(`Students notified: ${r.summary}`))
+        .catch(() => toast('Published, but the student update notice could not be saved.', 'error'))
     } catch (e) {
-      toast(e.message || 'Publish failed', 'error')
+      toast(e.message || 'Publish failed', 'error', { action: { label: 'Retry', onClick: () => onPublishRef.current?.() } })
     }
+    setProgress(null)
     setBusy('')
   }
+
+  onPublishRef.current = onPublish
 
   const leave = async (to) => {
     if (hasUnsaved) await flush()
@@ -889,19 +921,6 @@ export default function BuilderPage() {
 
   const unitIndex = unit ? content.units.indexOf(unit) : -1
   const chIndex = chapter ? unit.chapters.indexOf(chapter) : -1
-  const saveKey = working?.dirty ? 'unsaved' : save.status
-  const saveLabel = {
-    saved: save.at ? `Saved ${timeAgo(save.at)}` : 'All changes saved',
-    saving: 'Saving…',
-    unsaved: 'Unsaved changes',
-    error: 'Save failed',
-  }[saveKey]
-  const saveShort = {
-    saved: 'Saved',
-    saving: 'Saving…',
-    unsaved: 'Unsaved',
-    error: 'Error',
-  }[saveKey]
 
   return (
     <RichTextProvider>
@@ -966,26 +985,19 @@ export default function BuilderPage() {
             </button>
             <span className="bld-vsep mx-1 d-none d-sm-block" style={{ height: 22 }} />
 
-            <span
-              className={`save-pill s-${saveKey}`}
-              title={save.error || saveLabel}
-              role="status"
-              aria-live="polite"
-            >
-              <span className="save-ico">
-                {save.status === 'saving' ? (
-                  <LuLoaderCircle className="spin" />
-                ) : save.status === 'error' ? (
-                  <LuCircleAlert />
-                ) : working?.dirty || save.status === 'unsaved' ? (
-                  <LuSquarePen />
-                ) : (
-                  <LuCircleCheck />
-                )}
+            {chapter && (
+              <span className="d-none d-lg-inline-flex">
+                <SizeMeter bytes={chapterBytes} />
               </span>
-              <span className="save-chip-short d-xl-none">{saveShort}</span>
-              <span className="save-text d-none d-xl-inline">{saveLabel}</span>
-            </span>
+            )}
+            <SaveStatusChip
+              status={save.status}
+              at={save.at}
+              dirty={!!working?.dirty || save.status === 'unsaved'}
+              error={save.error}
+              progress={progress}
+              onRetry={() => doSave()}
+            />
 
             <button
               type="button"
@@ -1003,37 +1015,49 @@ export default function BuilderPage() {
               <span className="d-none d-lg-inline">Preview</span>
             </button>
 
-            <button
-              type="button"
-              className="btn ui-btn ui-btn-secondary bld-btn"
-              onClick={onSaveDraft}
-              disabled={!!busy}
-              title="Save current draft"
-              aria-label="Save Draft"
-            >
-              {busy === 'save' ? (
-                <span className="spinner-border spinner-border-sm" />
-              ) : (
-                <LuSave />
-              )}
-              <span className="d-none d-lg-inline">Save Draft</span>
-            </button>
+            <Tooltip text="Save Draft keeps your work private. Students only see changes after you Publish.">
+              <ProgressButton
+                className="btn ui-btn ui-btn-secondary bld-btn"
+                onClick={onSaveDraft}
+                busy={busy === 'save'}
+                pct={progress}
+                busyLabel={<span className="d-none d-lg-inline">{progressLabel('Saving', { pct: progress })}</span>}
+                icon={<LuSave />}
+                disabled={!!busy}
+                aria-label="Save Draft"
+              >
+                <span className="d-none d-lg-inline">Save Draft</span>
+              </ProgressButton>
+            </Tooltip>
 
-            <button
-              type="button"
-              className="btn ui-btn ui-btn-primary bld-btn"
-              onClick={onPublish}
-              disabled={!!busy}
-              title="Publish portal to students"
-              aria-label="Publish"
-            >
-              {busy === 'publish' ? (
-                <span className="spinner-border spinner-border-sm" />
-              ) : (
-                <LuCloudUpload />
-              )}
-              <span className="d-none d-sm-inline">Publish</span>
-            </button>
+            {portal.publishedAt && (
+              <Tooltip text="Copy the portal, unit and chapter links">
+                <button
+                  type="button"
+                  className="btn ui-btn ui-btn-secondary bld-btn d-none d-md-inline-flex"
+                  onClick={() => setPublishInfo({ justPublished: false, at: portal.publishedAt })}
+                  aria-label="Share links"
+                >
+                  <LuShare2 />
+                  <span className="d-none d-xl-inline">Share links</span>
+                </button>
+              </Tooltip>
+            )}
+
+            <Tooltip text="Publish makes the current version visible to students.">
+              <ProgressButton
+                className="btn ui-btn ui-btn-primary bld-btn"
+                onClick={onPublish}
+                busy={busy === 'publish'}
+                pct={progress}
+                busyLabel={<span className="d-none d-sm-inline">{progressLabel('Publishing', { pct: progress })}</span>}
+                icon={<LuCloudUpload />}
+                disabled={!!busy}
+                aria-label="Publish"
+              >
+                <span className="d-none d-sm-inline">Publish</span>
+              </ProgressButton>
+            </Tooltip>
 
             {/* Small screens: secondary actions live in one tidy "More" menu so the header never wraps */}
             <div className="bld-more d-md-none" ref={moreRef}>
@@ -1059,6 +1083,11 @@ export default function BuilderPage() {
                   <button type="button" role="menuitem" disabled={!!busy} onClick={() => { setMoreOpen(false); onPreview() }}>
                     <LuEye /> Preview
                   </button>
+                  {portal.publishedAt && (
+                    <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setPublishInfo({ justPublished: false, at: portal.publishedAt }) }}>
+                      <LuShare2 /> Share links
+                    </button>
+                  )}
                   <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); toggle() }}>
                     {theme === 'dark' ? <LuSun /> : <LuMoon />} {theme === 'dark' ? 'Light theme' : 'Dark theme'}
                   </button>
@@ -1363,6 +1392,16 @@ export default function BuilderPage() {
             onAdd={addBlock}
           />
         )}
+        <ProfileCompleteModal show={profileGate} onClose={() => setProfileGate(false)} reason="Add your specialization before publishing — students see it on your portal." />
+        <PublishedModal
+          show={!!publishInfo}
+          onClose={() => setPublishInfo(null)}
+          portal={portal}
+          content={content}
+          publishedAt={publishInfo?.at}
+          publishedBy={user?.name || user?.displayName || portal?.ownerName}
+          justPublished={!!publishInfo?.justPublished}
+        />
         <GoToTop containerSelector=".bld-center" />
       </div>
     </RichTextProvider>

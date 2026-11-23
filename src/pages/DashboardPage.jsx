@@ -6,6 +6,7 @@ import StatCards from '../components/StatCards'
 import { useToast } from '../components/Toast'
 import { roleLabel, updateUserProfile } from '../services/authService'
 import { computeStats } from '../services/portalService'
+import TeacherInsights from '../components/dashboard/TeacherInsights'
 
 function CameraIcon() { return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: "inline-block", verticalAlign: "middle" }}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>); }
 
@@ -116,6 +117,8 @@ export default function DashboardPage() {
       </div>
 
       <StatCards stats={stats} />
+
+      <TeacherInsights user={user} portals={portals} enrollStats={enrollStats} />
 
       <div className="glass-panel p-4">
         <div className="d-flex justify-content-between align-items-center mb-3">

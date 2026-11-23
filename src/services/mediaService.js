@@ -1,3 +1,4 @@
+import { trackUpload } from '../lib/uploadActivity'
 import { auth, isFirebaseConfigured } from '../firebase/config'
 
 /*
@@ -89,7 +90,11 @@ async function postToGithub(blob, { kind, folder, name }) {
 }
 
 /** Upload any allowed file (image / pdf / json). Returns { url, storage: 'github' | 'inline' } */
-export async function uploadBlob(blob, { kind = 'media', folder = 'uploads', name = 'file', allowInline = true } = {}) {
+export function uploadBlob(blob, opts = {}) {
+  return trackUpload(`Uploading ${opts.name || 'file'}`, () => uploadBlobUntracked(blob, opts)) // shows the app-wide bar and warns before leaving
+}
+
+async function uploadBlobUntracked(blob, { kind = 'media', folder = 'uploads', name = 'file', allowInline = true } = {}) {
   if (MODE !== 'inline' && isFirebaseConfigured && auth?.currentUser && !unavailable && blob.size <= MAX_UPLOAD_BYTES) {
     try {
       return { url: await postToGithub(blob, { kind, folder, name }), storage: 'github' }

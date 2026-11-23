@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { BIG_JSON_CHARS, formatJsonText } from '../../lib/jsonWorkerClient'
 import {
   LuBookOpen,
   LuBraces,
@@ -99,7 +100,11 @@ export function JsonCenter({ block, setData, ui, setUi }) {
   act.current = { setData, toast }
 
   const textEdit = !!ui.canvasEdit
-  const check = useMemo(() => validateLessonJson(d.json), [d.json])
+  // big JSON is validated at low priority so typing / pasting never blocks the UI
+  const deferredJson = useDeferredValue(d.json)
+  const checkSrc = (d.json || '').length > BIG_JSON_CHARS ? deferredJson : d.json
+  const check = useMemo(() => validateLessonJson(checkSrc), [checkSrc])
+  const [formatting, setFormatting] = useState(false)
   const studio = useMemo(() => (check.data ? normalizeToSections(check.data) : null), [check.data])
   const isStudio = !!studio?.studio
 
@@ -147,21 +152,29 @@ export function JsonCenter({ block, setData, ui, setUi }) {
     if (textEdit) setUi({ canvasEdit: false })
   }
 
-  const format = () => {
+  const format = async () => {
+    if (formatting) return
     const v = validateLessonJson(d.json)
     if (!v.data) {
       setDetails(true)
       return toast('Fix the JSON errors first, then format.', 'error')
     }
-    setJson(JSON.stringify(JSON.parse(d.json), null, 2))
-    toast('JSON formatted ✓')
+    setFormatting(true)
+    try {
+      setJson(await formatJsonText(d.json))
+      toast('JSON formatted ✓')
+    } catch (e) {
+      toast(e.message || 'Could not format the JSON', 'error')
+    } finally {
+      setFormatting(false)
+    }
   }
 
   const readJsonFile = async (f) => {
     if (!f) return
     if (!/\.json$/i.test(f.name) && f.type !== 'application/json')
       return toast('Please choose a .json file', 'error')
-    if (f.size > 500 * 1024) return toast('JSON file must be under 500 KB', 'error')
+    if (f.size > 6 * 1024 * 1024) return toast('JSON file must be under 6 MB', 'error')
     const t = await readFileText(f)
     const v = validateLessonJson(t)
     if (!v.ok) {
@@ -170,16 +183,16 @@ export function JsonCenter({ block, setData, ui, setUi }) {
       return toast(`Imported, but file has errors: ${v.errors[0].message}`, 'error')
     }
     if (!d.json.trim()) {
-      setJson(JSON.stringify(JSON.parse(t), null, 2))
+      try { setJson(await formatJsonText(t)) } catch { setJson(t) }
       toast(`Loaded ${f.name}`)
     } else {
       setPending({ name: f.name, text: t })
     }
   }
 
-  const applyImport = (mode) => {
+  const applyImport = async (mode) => {
     try {
-      if (mode === 'replace') setJson(JSON.stringify(JSON.parse(pending.text), null, 2))
+      if (mode === 'replace') setJson(await formatJsonText(pending.text))
       else {
         const cur = validateLessonJson(d.json)
         if (!cur.data) throw new Error('Current JSON has errors — fix it or choose Replace.')
@@ -236,16 +249,16 @@ export function JsonCenter({ block, setData, ui, setUi }) {
       return
     }
     // Format and persist
-    try {
-      const formatted = JSON.stringify(JSON.parse(d.json), null, 2)
-      setData({ json: formatted })
-      toast('Valid JSON saved to block storage ✓')
-    } catch {
-      setData({ json: d.json })
-      toast('JSON saved to block storage ✓')
-    } finally {
-      setSavingJson(false)
-    }
+    formatJsonText(d.json)
+      .then((formatted) => {
+        setData({ json: formatted })
+        toast('Valid JSON saved to block storage ✓')
+      })
+      .catch(() => {
+        setData({ json: d.json })
+        toast('JSON saved to block storage ✓')
+      })
+      .finally(() => setSavingJson(false))
   }
 
   const copyGuideExample = () => {

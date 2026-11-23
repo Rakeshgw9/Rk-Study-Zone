@@ -1,3 +1,4 @@
+import { cleanText } from '../lib/profile'
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -25,11 +26,11 @@ export const isStaffRole = (r) => isAdminRole(r) || r === 'teacher'
 export const roleLabel = (r) => (isAdminRole(r) ? 'Super Admin' : r === 'teacher' ? 'Teacher' : 'Student')
 
 /** Extra profile fields stored in users/{uid} (Settings → Profile Details) */
-export const PROFILE_FIELDS = ['phone', 'altEmail', 'address', 'city', 'state', 'pincode', 'institution', 'bio']
-const FIELD_MAX = { phone: 20, altEmail: 120, address: 240, city: 60, state: 60, pincode: 12, institution: 120, bio: 400 }
+export const PROFILE_FIELDS = ['phone', 'altEmail', 'address', 'city', 'state', 'pincode', 'institution', 'bio', 'specialization', 'qualification', 'experienceYears', 'subjects', 'languages', 'availability', 'website']
+const FIELD_MAX = { phone: 20, altEmail: 120, address: 240, city: 60, state: 60, pincode: 12, institution: 120, bio: 400, specialization: 80, qualification: 120, experienceYears: 2, subjects: 160, languages: 120, availability: 160, website: 200 }
 export function cleanDetails(details = {}) {
   const out = {}
-  PROFILE_FIELDS.forEach((k) => { if (details[k] !== undefined) out[k] = String(details[k] ?? '').trim().slice(0, FIELD_MAX[k]) })
+  PROFILE_FIELDS.forEach((k) => { if (details[k] !== undefined) out[k] = cleanText(details[k], FIELD_MAX[k]) })
   return out
 }
 /** Firebase Auth only accepts short http(s) photo URLs — inline (data:) photos live in Firestore only. */

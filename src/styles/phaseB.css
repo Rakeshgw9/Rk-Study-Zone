@@ -1,0 +1,93 @@
+/* Phase B — teacher identity, portal discovery, dashboards. Uses the existing --c-* theme variables (light + dark). */
+
+/* teacher badge */
+.teacher-badge { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin: 4px 0; }
+.tb-photo { flex: none; border-radius: 50%; overflow: hidden; background: var(--c-raise); display: inline-flex; align-items: center; justify-content: center; color: var(--c-soft); }
+.tb-photo img { width: 100%; height: 100%; object-fit: cover; }
+.tb-text { display: grid; line-height: 1.2; min-width: 0; }
+.tb-text b { font-size: .82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-text small { font-size: .72rem; color: var(--c-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* rich course card = div wrapper with a main button and an info button */
+.course-card-rich { position: relative; }
+.course-card-rich .cc-main { all: unset; box-sizing: border-box; display: flex; flex-direction: column; flex: 1; width: 100%; cursor: pointer; color: inherit; text-align: left; }
+.course-card-rich .cc-main:focus-visible, .cc-info:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+.cc-body .cc-dates { display: block; margin-top: 2px; font-size: .72rem; }
+.cc-info { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .35); background: rgba(8, 14, 30, .62); color: #fff; display: inline-flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.cc-info:hover { background: rgba(8, 14, 30, .85); }
+
+/* filters */
+.st-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+@media (max-width: 767.98px) { .st-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 399.98px) { .st-filters { grid-template-columns: 1fr; } }
+
+/* portal details modal */
+.rk-modal.pd-modal { max-width: 640px; width: calc(100vw - 24px); max-height: calc(100dvh - 24px); display: flex; flex-direction: column; background: var(--c-panel-solid); color: var(--c-text); border: 1px solid var(--c-line-strong); border-radius: 18px; box-shadow: var(--c-shadow); padding: 0; overflow: hidden; }
+.pd-head { display: flex; justify-content: space-between; gap: 12px; padding: 18px 20px 8px; }
+.pd-title { font-size: 1.25rem; margin: 0; overflow-wrap: anywhere; }
+.pd-cat { margin: 2px 0 0; color: var(--c-soft); font-size: .84rem; }
+.pd-body { padding: 4px 20px 8px; overflow: auto; display: grid; gap: 14px; }
+.pd-desc { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.pd-sec h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--c-faint); margin: 0 0 6px; }
+.pd-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.pd-facts > div { background: var(--c-raise); border: 1px solid var(--c-line); border-radius: 10px; padding: 8px 10px; }
+.pd-facts dt { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--c-faint); display: flex; gap: 4px; align-items: center; }
+.pd-facts dd { margin: 2px 0 0; font-size: .86rem; }
+.pd-outline { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: .88rem; }
+.pd-outline ul { margin: 2px 0 0; padding-left: 16px; color: var(--c-soft); }
+.pd-foot { display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding: 12px 20px 16px; border-top: 1px solid var(--c-line); flex-wrap: wrap; }
+@media (max-width: 575.98px) { .pd-foot .btn { flex: 1; justify-content: center; } .pd-facts { grid-template-columns: 1fr; } }
+
+/* student overview */
+.st-overview { margin-bottom: 16px; }
+.so-grid { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr .8fr; gap: 10px; }
+@media (max-width: 991.98px) { .so-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 479.98px) { .so-grid { grid-template-columns: 1fr; } }
+.so-card { background: var(--c-panel); border: 1px solid var(--c-line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.so-card small { color: var(--c-soft); font-size: .74rem; display: flex; gap: 6px; align-items: center; }
+.so-card b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.so-big { font-size: 1.6rem; }
+.so-sub { color: var(--c-soft); font-size: .84rem; }
+.so-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .82rem; }
+.so-list li { display: flex; justify-content: space-between; gap: 8px; }
+.so-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.so-recs { margin-top: 14px; }
+.so-rec-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.so-rec { all: unset; box-sizing: border-box; flex: 0 0 min(260px, 78vw); cursor: pointer; background: var(--c-panel); border: 1px solid var(--c-line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; min-height: 44px; }
+.so-rec:hover, .so-rec:focus-visible { border-color: var(--c-line-strong); outline: none; }
+.so-rec:focus-visible { outline: 2px solid var(--c-primary); }
+
+/* teacher insights */
+.ti-wrap { margin-top: 18px; }
+.ti-profile { display: flex; gap: 12px; align-items: center; border: 1px solid var(--c-line); background: var(--c-panel); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+.ti-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 767.98px) { .ti-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ti-kpi { background: var(--c-panel); border: 1px solid var(--c-line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 2px; }
+.ti-kpi small { color: var(--c-soft); font-size: .74rem; }
+.ti-kpi b { font-size: 1.6rem; line-height: 1.1; }
+.ti-kpi span { color: var(--c-faint); font-size: .74rem; }
+.ti-table th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--c-faint); font-weight: 600; white-space: nowrap; }
+.ti-table td, .ti-table th { background: transparent; color: var(--c-text); border-color: var(--c-line); }
+.ti-table a { color: var(--c-text); }
+.ti-feed li { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--c-line); font-size: .86rem; }
+.ti-feed li:last-child { border-bottom: 0; }
+.ti-feed span { color: var(--c-soft); }
+.ti-feed small { margin-left: auto; color: var(--c-faint); }
+.ti-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.ti-range { margin: 0; }
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c-ok, #22c55e); margin-left: 6px; animation: rkPulse 1.8s ease infinite; }
+@keyframes rkPulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* activity chart (SVG) */
+.act-chart { margin: 0; }
+.act-chart svg { width: 100%; height: auto; display: block; }
+.act-grid { stroke: var(--c-line); stroke-width: 1; }
+.act-axis { fill: var(--c-faint); font-size: 11px; }
+.act-bar { fill: var(--c-primary); opacity: .85; }
+.act-line, .act-dot { stroke: var(--c-ok, #22c55e); }
+.act-dot { fill: var(--c-panel-solid, #0b1220); stroke-width: 2; }
+.act-legend { display: flex; gap: 16px; font-size: .78rem; color: var(--c-soft); margin-top: 6px; flex-wrap: wrap; }
+.act-legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.lg-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--c-primary); }
+.lg-line { width: 16px; height: 3px; border-radius: 2px; background: var(--c-ok, #22c55e); }

@@ -1,12 +1,14 @@
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query,
-  serverTimestamp, setDoc, updateDoc, where,
+  serverTimestamp, setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../firebase/config'
 import { isAdminRole } from './authService'
 import { uploadDocument, uploadImage } from './storageService'
 import { toMillis } from '../lib/id'
 import { toFirestoreSafe } from '../lib/firestoreSafe'
+import { identityDiffers, ownerIdentity } from '../lib/profile'
+import { beginUpload } from '../lib/uploadActivity'
 
 /*
   portals/{id}
@@ -73,7 +75,7 @@ export async function createPortal(data, coverFile, user, extra = {}) {
   const payload = {
     name: data.name.trim(), slug: data.slug.trim().toLowerCase(), description: (data.description || '').trim(),
     category: data.category || 'other', accessType: data.accessType || 'free', status: data.active ? 'active' : 'draft',
-    coverUrl: extra.coverUrl || null, ownerId: user.uid, ownerName: user.name || user.email || '',
+    coverUrl: extra.coverUrl || null, ownerId: user.uid, ...ownerIdentity(user),
     studentsCount: 0, enrollmentsCount: 0, loginsToday: 0, publishedAt: null,
   }
   if (!isFirebaseConfigured) {
@@ -131,7 +133,11 @@ export async function saveSyllabus(portalId, file) {
     for (let i = 0; i < data.length; i += SYLLABUS_CHUNK) parts.push(data.slice(i, i + SYLLABUS_CHUNK))
     const baseRef = doc(db, 'portalSyllabus', portalId)
     const old = await getDoc(baseRef)
-    await Promise.all(parts.map((chunk, i) => setDoc(doc(db, 'portalSyllabus', portalId, 'parts', String(i)), toFirestoreSafe({ i, data: chunk }))))
+    const job = beginUpload('Uploading syllabus')
+    try {
+      let done = 0
+      await Promise.all(parts.map((chunk, i) => setDoc(doc(db, 'portalSyllabus', portalId, 'parts', String(i)), toFirestoreSafe({ i, data: chunk })).then(() => job.progress((++done / parts.length) * 100))))
+    } finally { job.end() }
     await setDoc(baseRef, toFirestoreSafe({ ...meta, parts: parts.length, updatedAt: serverTimestamp() }))
     const oldParts = old.exists() ? Number(old.data().parts) || 0 : 0
     for (let i = parts.length; i < oldParts; i += 1) await deleteDoc(doc(db, 'portalSyllabus', portalId, 'parts', String(i))).catch(() => {})
@@ -287,4 +293,50 @@ export function computeStats(portals) {
     studentLogins: portals.reduce((s, p) => s + (p.loginsToday || 0), 0),
     activePortals: portals.filter((p) => p.status === 'active').length,
   }
+}
+/* ---------- Teacher identity on portals (denormalised: students cannot read /users) ----------
+  Copies name / photo / specialization / qualification onto every portal the user owns.
+  Used after a profile edit and as a one-time backfill for portals created before this field existed.
+  Cost: 1 query read (own portals) + 1 write per portal whose copy is out of date, in batches of 400. */
+export async function syncOwnerIdentity(user, { onProgress } = {}) {
+  if (!user?.uid) return 0
+  const identity = ownerIdentity(user)
+  if (!isFirebaseConfigured) {
+    const all = demoRead()
+    const todo = all.filter((p) => p.ownerId === user.uid && identityDiffers(p, identity))
+    if (!todo.length) return 0
+    writeAll(all.map((p) => (todo.includes(p) ? { ...p, ...identity } : p)))
+    onProgress?.(100, todo.length, todo.length)
+    return todo.length
+  }
+  const snap = await getDocs(query(collection(db, 'portals'), where('ownerId', '==', user.uid)))
+  const todo = snap.docs.filter((d) => identityDiffers(d.data(), identity))
+  for (let i = 0; i < todo.length; i += 400) {
+    const batch = writeBatch(db)
+    todo.slice(i, i + 400).forEach((d) => batch.update(d.ref, toFirestoreSafe(identity)))
+    await batch.commit()
+    onProgress?.(Math.round((Math.min(i + 400, todo.length) / todo.length) * 100), Math.min(i + 400, todo.length), todo.length)
+  }
+  return todo.length
+}
+
+/** Teacher preference "notify me when a student submits an exam": copied to the teacher's portals so the student's
+    browser knows whether to send the notice (students cannot read the teacher's private settings). */
+export async function syncExamFlag(user, value) {
+  if (!user?.uid) return 0
+  const flag = !!value
+  if (!isFirebaseConfigured) {
+    const all = demoRead()
+    const todo = all.filter((p) => p.ownerId === user.uid && !!p.notifyExamSubmit !== flag)
+    if (todo.length) writeAll(all.map((p) => (todo.includes(p) ? { ...p, notifyExamSubmit: flag } : p)))
+    return todo.length
+  }
+  const snap = await getDocs(query(collection(db, 'portals'), where('ownerId', '==', user.uid)))
+  const todo = snap.docs.filter((d) => !!d.data().notifyExamSubmit !== flag)
+  for (let i = 0; i < todo.length; i += 400) {
+    const batch = writeBatch(db)
+    todo.slice(i, i + 400).forEach((d) => batch.update(d.ref, { notifyExamSubmit: flag }))
+    await batch.commit()
+  }
+  return todo.length
 }
