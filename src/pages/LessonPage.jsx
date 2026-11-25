@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { SkeletonEditor } from '../components/ui/Loaders'
+import { LessonSkeleton } from '../components/ui/Loaders'
 import {
   LuArrowLeft,
   LuArrowRight,
@@ -659,23 +659,21 @@ export default function LessonPage() {
     }[state]
     return (
       <div className="st-shell">
-        <div className="st-center-msg">
-          {state === 'loading' ? (
-            <SkeletonEditor />
-          ) : (
-            <>
-              <LuCircleAlert className="fs-1 text-warning" />
-              <h2 className="h5">{portal?.name || 'Course'}</h2>
-              <p>{msg}</p>
-              <Link
-                className="btn ui-btn ui-btn-primary"
-                to={isStaffRole(user?.role) && portal ? `/admin/builder/${portal.id}` : '/learn'}
-              >
-                {isStaffRole(user?.role) && portal ? 'Open Builder' : 'My Courses'}
-              </Link>
-            </>
-          )}
-        </div>
+        {state === 'loading' ? (
+          <LessonSkeleton />
+        ) : (
+          <div className="st-center-msg">
+            <LuCircleAlert className="fs-1 text-warning" />
+            <h2 className="h5">{portal?.name || 'Course'}</h2>
+            <p>{msg}</p>
+            <Link
+              className="btn ui-btn ui-btn-primary"
+              to={isStaffRole(user?.role) && portal ? `/admin/builder/${portal.id}` : '/learn'}
+            >
+              {isStaffRole(user?.role) && portal ? 'Open Builder' : 'My Courses'}
+            </Link>
+          </div>
+        )}
       </div>
     )
   }
@@ -816,7 +814,7 @@ export default function LessonPage() {
         />
 
         <main
-          className="st-main"
+          className={`st-main${unit.fullBackgroundMode ? ' has-unit-bg' : ''}`}
           style={{
             background:
               unit.fullBackgroundMode === 'image' && unit.fullBackgroundImage

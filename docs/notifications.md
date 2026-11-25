@@ -1,9 +1,9 @@
-# Phase C — Notification system
+# Notification system
 
 ## Status of this build (read first)
 - Same constraint as before: written without a working `npm install`, so `npm run lint` / `npm run build` were NOT run and nothing was clicked in a browser. All source files parse; 10 new unit tests pass (108 total, 94 pass). The same 14 tests that fail in your original zip still fail (identical list, none new).
 - Deploy the updated rules: `firebase deploy --only firestore:rules`.
-- Chat notifications (reply / new question) arrive with Phase D; the inbox plumbing for them is already here.
+- Chat notifications (reply / new question) arrive with this release; the inbox plumbing for them is already here.
 
 ## What was built
 - **Bell + dropdown** in the student header and the admin top bar: unread badge (`9+`), latest 8 items, "Mark all read", "View all". Screen readers get an `aria-live` unread count. Escape / outside click closes it.
@@ -60,7 +60,7 @@ Modified: `App.jsx` (provider + routes), `components/Topbar.jsx`, `components/st
 
 ## Intentionally not done / known limits
 - Lint, build and browser verification (see top).
-- Chat reply / question notices (Phase D).
+- Chat reply / question notices (this release).
 - New strings are English only (Odia translations still to do, listed in the remaining-work document).
 - Students who never re-open the app only see new feed items on next load (no push, by design).
 - Notices are client-written: a malicious enrolled student could create extra enrolment/exam notices for that portal's owner (rules cap size and shape, not frequency).

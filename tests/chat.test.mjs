@@ -1,4 +1,4 @@
-// Run with: node --import ./tests/_register.mjs --test tests/phaseD.test.mjs
+// Run with: node --import ./tests/_register.mjs --test tests/chat.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { checkRate, cleanMessage, contextLabel, filterThreads, MAX_MESSAGE, mergeMessages, messageState, preview, sameContext, threadIdOf, typingActive, unansweredThreads, unreadThreads, validateMessage } from '../src/lib/chat.js'

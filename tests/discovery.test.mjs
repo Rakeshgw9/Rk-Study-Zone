@@ -1,4 +1,4 @@
-// Run with: node --import ./tests/_register.mjs --test tests/phaseB.test.mjs
+// Run with: node --import ./tests/_register.mjs --test tests/discovery.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { cleanText, identityDiffers, needsTeacherProfile, ownerIdentity, profileCompleteness, safeWebsite, validateProfile } from '../src/lib/profile.js'

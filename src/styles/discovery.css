@@ -1,4 +1,4 @@
-/* Phase B — teacher identity, portal discovery, dashboards. Uses the existing --c-* theme variables (light + dark). */
+/* Teacher identity, portal discovery, dashboards. Uses the existing --c-* theme variables (light + dark). */
 
 /* teacher badge */
 .teacher-badge { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin: 4px 0; }
@@ -91,3 +91,34 @@
 .act-legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .lg-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--c-primary); }
 .lg-line { width: 16px; height: 3px; border-radius: 2px; background: var(--c-ok, #22c55e); }
+
+/* ---------- Student shell: course cards alignment ---------- */
+.course-card-rich { height: 100%; display: flex; flex-direction: column; }
+.course-card-rich .cc-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.course-card-rich .cc-body .teacher-badge { display: inline-flex; align-items: center; gap: 8px; }
+.course-card-rich .cc-body .tb-text { display: flex; flex-direction: column; line-height: 1.2; }
+.course-card-rich .cc-body .bar { margin-top: auto; }
+
+/* ---------- Student shell: LIGHT theme visibility fixes ---------- */
+[data-theme="light"] .st-shell .user-menu { background: #fff; border-color: #dce5ef; box-shadow: 0 16px 40px rgba(22, 42, 68, .16); }
+[data-theme="light"] .st-shell .user-menu-head strong { color: #172438; }
+[data-theme="light"] .st-shell .user-menu-head small { color: #53647b; }
+[data-theme="light"] .st-shell .user-menu > button { color: #172438; }
+[data-theme="light"] .st-shell .user-menu > button:hover { background: #edf3f9; }
+[data-theme="light"] .st-shell .user-menu > button.text-danger-soft { color: #c62839; }
+[data-theme="light"] .st-shell .tools-syllabus { background: #f5f8fc; border-color: #dce5ef; color: #172438; }
+[data-theme="light"] .st-shell .tools-syllabus:hover { background: #fff7db; border-color: #e6c14f; }
+[data-theme="light"] .st-shell .tools-syllabus small { color: #53647b; }
+[data-theme="light"] .st-shell .st-mcq-exam-item { background: #f5f8fc; border-color: #dce5ef; }
+[data-theme="light"] .st-shell .st-mcq-exam-item:hover { background: #edf3f9; }
+[data-theme="light"] .st-shell .mcq-item-info b { color: #172438; }
+[data-theme="light"] .st-shell .mcq-item-info small { color: #53647b; }
+[data-theme="light"] .st-shell .st-side small, [data-theme="light"] .st-shell .st-side .text-soft { color: #53647b; }
+/* breadcrumb + top buttons when a unit has its own (usually dark) background */
+.st-main.has-unit-bg .st-crumbs, .st-main.has-unit-bg .st-crumbs a { color: rgba(255, 255, 255, .82); }
+.st-main.has-unit-bg .st-crumbs .cur { color: #fff; }
+.st-main.has-unit-bg .st-crumbs a:hover { color: #7fd6ff; }
+.st-main.has-unit-bg .st-topline .ui-btn-secondary { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .3); color: #fff; }
+[data-theme="light"] .st-main:not(.has-unit-bg) .st-crumbs .cur { color: #172438; }
+[data-theme="light"] .st-main:not(.has-unit-bg) .st-crumbs, [data-theme="light"] .st-main:not(.has-unit-bg) .st-crumbs a { color: #53647b; }
+.st-banner small, .st-banner .st-banner-meta { text-shadow: 0 1px 6px rgba(0, 0, 0, .45); }

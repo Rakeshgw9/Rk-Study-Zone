@@ -1,5 +1,8 @@
+import { LuBellOff, LuMessageSquare, LuUserPlus, LuClipboardCheck, LuRefreshCw } from 'react-icons/lu'
 import { useNotifications } from '../context/NotificationsContext'
 import { useToast } from './Toast'
+
+const ICONS = { muteContent: LuRefreshCw, muteChat: LuMessageSquare, muteEnrol: LuUserPlus, examSubmit: LuClipboardCheck }
 
 /** Mute switches (+ teacher options). Email / push are intentionally not offered in this release. */
 export default function NotificationPrefs({ staff = false }) {
@@ -15,14 +18,22 @@ export default function NotificationPrefs({ staff = false }) {
   }
   return (
     <fieldset className="nt-prefs">
-      <legend className="h6 fw-semibold">Notification preferences</legend>
-      {rows.map(([key, label, hint]) => (
-        <label className="nt-pref" key={key} htmlFor={`np-${key}`}>
-          <span><b>{label}</b><small>{hint}</small></span>
-          <input id={`np-${key}`} type="checkbox" role="switch" className="form-check-input" checked={!!prefs[key]} onChange={(e) => change(key, e.target.checked)} />
-        </label>
-      ))}
-      <small className="text-muted-soft">Notifications are shown inside the app for 60 days. Email and browser push are not available yet.</small>
+      <legend className="nt-prefs-title"><LuBellOff aria-hidden="true" /> Notification preferences</legend>
+      <div className="nt-pref-list">
+        {rows.map(([key, label, hint]) => {
+          const Icon = ICONS[key] || LuBellOff
+          const on = !!prefs[key]
+          return (
+            <label className={`nt-pref${on ? ' is-on' : ''}`} key={key} htmlFor={`np-${key}`}>
+              <span className="nt-pref-ico" aria-hidden="true"><Icon /></span>
+              <span className="nt-pref-text"><b>{label}</b><small>{hint}</small></span>
+              <input id={`np-${key}`} type="checkbox" role="switch" className="nt-sw-input" checked={on} onChange={(e) => change(key, e.target.checked)} />
+              <span className="nt-sw" aria-hidden="true" />
+            </label>
+          )
+        })}
+      </div>
+      <small className="nt-pref-foot">Notifications are shown inside the app for 60 days. Email and browser push are not available yet.</small>
     </fieldset>
   )
 }

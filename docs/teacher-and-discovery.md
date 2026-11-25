@@ -1,7 +1,7 @@
-# Phase B — Teacher profile, portal identity, student discovery, dashboards
+# Teacher profile, portal identity, student discovery, dashboards
 
 ## Status of this build (read first)
-- Same constraint as Phase A: written without a working `npm install`, so `npm run lint` / `npm run build` / Lighthouse were NOT run and nothing was clicked in a browser. All source files parse; 8 new unit tests pass (98 tests total, 84 pass). The same 14 tests that failed in your original zip still fail (identical list, none new).
+- Same constraint as this release: written without a working `npm install`, so `npm run lint` / `npm run build` / Lighthouse were NOT run and nothing was clicked in a browser. All source files parse; 8 new unit tests pass (98 tests total, 84 pass). The same 14 tests that failed in your original zip still fail (identical list, none new).
 - **Charts: no library added.** Instead of Chart.js/Recharts the activity chart is a small dependency-free SVG component, lazy-loaded as its own chunk. Reason: nothing to install, nothing extra to download, theme-aware through CSS variables. If you later want zoom/tooltips, Chart.js (~70 KB gz) is the lighter library to add.
 - Needs `firebase deploy --only firestore:rules` (new `portalActivity` block).
 

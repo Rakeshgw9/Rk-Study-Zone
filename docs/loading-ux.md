@@ -1,10 +1,10 @@
-# Phase A — Performance, feedback UX, Publish popup, large chapters
+# Performance, feedback UX, Publish popup, large chapters
 
 ## Status of this build (read first)
 - Written and checked WITHOUT a working `npm install` (the authoring sandbox had no registry access).
 - Verified: every `src/**/*.js(x)` parses (TypeScript syntax check), the 12 new unit tests pass, and the QR generator was decoded successfully with OpenCV.
 - NOT run: `npm run lint`, `npm run build`, Lighthouse, browser/manual UI tests. Run `npm ci && npm run lint && npm test && npm run build` first.
-- `npm test`: 14 tests fail in the ORIGINAL zip too (identical list — stale source-text assertions, e.g. test 21 expects `setDoc` in contentService). Phase A adds 12 passing tests and no new failures.
+- `npm test`: 14 tests fail in the ORIGINAL zip too (identical list — stale source-text assertions, e.g. test 21 expects `setDoc` in contentService). this release adds 12 passing tests and no new failures.
 
 ## New files
 | File | Purpose |

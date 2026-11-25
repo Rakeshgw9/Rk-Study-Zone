@@ -1,4 +1,4 @@
-# Phase D — Live chat with teachers (Ask-a-Doubt)
+# Live chat with teachers (Ask-a-Doubt)
 
 ## Status of this build (read first)
 - Same constraint as before: written without a working `npm install`, so `npm run lint` / `npm run build` were NOT run and nothing was clicked in a browser. All source files parse; 10 new unit tests pass (118 total, 104 pass). The same 14 tests that fail in your original zip still fail (identical list, none new).
@@ -18,7 +18,7 @@
 - Teachers receive only threads of their own portals (the query filters by `teacherUid`, and rules enforce it); admins / super admins see all.
 - Teacher dashboard: new KPI **Unanswered doubts** and an "Open inbox" action.
 
-## Notifications for chat (reuses Phase C)
+## Notifications for chat (reuses this release)
 - Student asks → teacher gets "<name> asked a question" (bell, Messages badge, dashboard KPI). Teacher replies → student gets "<teacher> replied to your question".
 - **To keep writes low, a notice is created only when the other side had nothing unread yet** (first message of a burst). Later messages in the same burst update the thread counters but do not create more notices.
 
@@ -34,7 +34,7 @@
 - **Update a thread:** the student may change only student-side fields (own read/typing time, status, context, last message); the teacher side likewise. The *other* side's unread counter can only go up by 1 per write; your own counter can only go down. Nobody can change `studentUid`, `teacherUid`, `portalId`.
 - **Delete a thread:** nobody.
 - **Messages:** append-only (no edit, no delete — so nobody can alter another person's message). Sender id must be the signed-in user; a "student" message needs `senderRole = student` in the student's own thread, a "teacher" message needs the thread's teacher or an admin. Text ≤ 1000 characters, image link ≤ 500 000 characters, at least one of the two.
-- **Chat notices (`users/{uid}/notifications`, kind `chat`):** only between the two sides of an existing thread (student → that thread's teacher; teacher/admin → that thread's student). `enrol` / `exam` notices keep their Phase C rules.
+- **Chat notices (`users/{uid}/notifications`, kind `chat`):** only between the two sides of an existing thread (student → that thread's teacher; teacher/admin → that thread's student). `enrol` / `exam` notices keep their this release rules.
 
 ### Manual rules test (do this once; or use the Firebase Emulator)
 1. Student A (enrolled) sends a question → thread `p1_A` exists.
@@ -43,7 +43,7 @@
 4. Try `updateDoc(p1_A, { unreadForTeacher: 0 })` as student A → **denied**; `updateDoc(msg…)` / `deleteDoc(msg…)` as anyone → **denied**.
 
 ## Cost (Firebase free plan)
-- Closed chat: **0 reads, 0 writes** (badge comes from the notification listener Phase C already runs).
+- Closed chat: **0 reads, 0 writes** (badge comes from the notification listener this release already runs).
 - Open chat panel: 1 listener on the thread doc + 1 on the newest 30 messages; then 1 read per new message / per thread change (typing signals add a thread-doc read for the other side).
 - Sending a message: 2 writes (message + thread) + 1 notice write only for the first message of a burst. Marking read: 1 write, only when there are unread messages. Typing: at most 1 tiny write per 4 s while typing.
 - Teacher inbox: one listener on ≤ 100 threads, only while the page is open (no composite index needed; sorted in the browser for teachers).

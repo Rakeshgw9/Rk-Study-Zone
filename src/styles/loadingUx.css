@@ -1,4 +1,4 @@
-/* Phase A — loaders, tooltip, size meter, publish modal, responsive hardening.
+/* Loaders, tooltip, size meter, publish modal, responsive hardening.
    Uses the existing --c-* theme variables, so light and dark themes both work. */
 
 /* ---------- loaders ---------- */
@@ -99,3 +99,64 @@ pre { overflow-x: auto; }
 
 /* app-wide upload feedback */
 .upload-activity { position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 2100; width: min(320px, calc(100vw - 32px)); background: var(--c-panel-solid); color: var(--c-text); border: 1px solid var(--c-line-strong); border-radius: 12px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, .4); }
+
+/* page loader ring + theme-aware skeletons */
+.rk-ring { width: 46px; height: 46px; border-radius: 50%; border: 4px solid rgba(80, 160, 255, .22); border-top-color: var(--c-primary, #2785ed); animation: rkRing .8s linear infinite; display: inline-block; }
+@keyframes rkRing { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rk-ring { animation-duration: 2.4s; } }
+
+/* ---------- Skeletons (visible in BOTH themes) ---------- */
+:root { --sk-a: rgba(148, 163, 184, .13); --sk-b: rgba(148, 163, 184, .26); --sk-card: rgba(13, 27, 50, .6); --sk-line: rgba(148, 163, 184, .16); }
+[data-theme="light"] { --sk-a: #e4eaf2; --sk-b: #f4f7fb; --sk-card: #ffffff; --sk-line: #dce5ef; }
+.sk { display: block; border-radius: 8px; background: linear-gradient(90deg, var(--sk-a) 25%, var(--sk-b) 45%, var(--sk-a) 65%); background-size: 300% 100%; animation: skShimmer 1.4s ease infinite; }
+@keyframes skShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+.sk-wrap { display: grid; gap: 16px; }
+.sk-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sk-box { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--sk-line); border-radius: 14px; background: var(--sk-card); }
+.sk-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sk-cards, .lp-skel-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sk-card { border: 1px solid var(--sk-line); border-radius: 16px; background: var(--sk-card); overflow: hidden; }
+.sk-card-body { display: grid; gap: 10px; padding: 14px; }
+@media (max-width: 991.98px) { .sk-overview, .sk-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sk-cards, .lp-skel-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) { .sk-overview, .sk-filters, .sk-cards, .lp-skel-row { grid-template-columns: 1fr; } }
+.sk-lesson { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px clamp(10px, 2vw, 24px); min-height: 70vh; }
+@media (min-width: 992px) { .sk-lesson { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 1200px) { .sk-lesson { grid-template-columns: 290px minmax(0, 1fr) 300px; } }
+.sk-col { display: grid; gap: 12px; align-content: start; padding: 14px; border: 1px solid var(--sk-line); border-radius: 16px; background: var(--sk-card); }
+.sk-col-left, .sk-col-right { display: none; }
+@media (min-width: 992px) { .sk-col-right { display: grid; } }
+@media (min-width: 1200px) { .sk-col-left { display: grid; } }
+.sk-main { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.sk-row { display: flex; align-items: center; gap: 10px; }
+.sk-paper { display: grid; gap: 12px; padding: 22px; border: 1px solid var(--sk-line); border-radius: 16px; background: var(--sk-card); }
+.sk-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---------- Loader (replaces the broken thin bar / spinner) ---------- */
+.rk-ring { width: 46px; height: 46px; border-radius: 50%; border: 4px solid rgba(80, 160, 255, .22); border-top-color: var(--c-primary, #2785ed); animation: rkRing .8s linear infinite; display: inline-block; }
+@keyframes rkRing { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rk-ring { animation-duration: 2.4s; } }
+
+/* ---------- Skeletons (visible in BOTH themes) ---------- */
+:root { --sk-a: rgba(148, 163, 184, .13); --sk-b: rgba(148, 163, 184, .26); --sk-card: rgba(13, 27, 50, .6); --sk-line: rgba(148, 163, 184, .16); }
+[data-theme="light"] { --sk-a: #e4eaf2; --sk-b: #f4f7fb; --sk-card: #ffffff; --sk-line: #dce5ef; }
+.sk { display: block; border-radius: 8px; background: linear-gradient(90deg, var(--sk-a) 25%, var(--sk-b) 45%, var(--sk-a) 65%); background-size: 300% 100%; animation: skShimmer 1.4s ease infinite; }
+@keyframes skShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+.sk-wrap { display: grid; gap: 16px; }
+.sk-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sk-box { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--sk-line); border-radius: 14px; background: var(--sk-card); }
+.sk-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sk-cards, .lp-skel-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sk-card { border: 1px solid var(--sk-line); border-radius: 16px; background: var(--sk-card); overflow: hidden; }
+.sk-card-body { display: grid; gap: 10px; padding: 14px; }
+@media (max-width: 991.98px) { .sk-overview, .sk-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sk-cards, .lp-skel-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) { .sk-overview, .sk-filters, .sk-cards, .lp-skel-row { grid-template-columns: 1fr; } }
+.sk-lesson { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px clamp(10px, 2vw, 24px); min-height: 70vh; }
+@media (min-width: 992px) { .sk-lesson { grid-template-columns: minmax(0, 1fr) 300px; } }
+@media (min-width: 1200px) { .sk-lesson { grid-template-columns: 290px minmax(0, 1fr) 300px; } }
+.sk-col { display: grid; gap: 12px; align-content: start; padding: 14px; border: 1px solid var(--sk-line); border-radius: 16px; background: var(--sk-card); }
+.sk-main { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.sk-row { display: flex; align-items: center; gap: 10px; }
+.sk-paper { display: grid; gap: 12px; padding: 22px; border: 1px solid var(--sk-line); border-radius: 16px; background: var(--sk-card); }
+.sk-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

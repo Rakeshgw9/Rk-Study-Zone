@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { PageLoader } from '../components/ui/Loaders'
+import { CourseGridSkeleton, PageLoader } from '../components/ui/Loaders'
 import { LuArrowRight, LuBookmark, LuBookOpen, LuChartColumn, LuCircleAlert, LuInfo, LuSearch, LuTrophy } from 'react-icons/lu'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import StudentHeader from '../components/student/StudentHeader'
@@ -88,7 +88,7 @@ export default function StudentHome() {
             </select>
           </div>
         )}
-        {items === null ? <div className="row g-3">{[1, 2, 3].map((i) => <div key={i} className="col-md-6 col-lg-4"><div className="skeleton-card" /></div>)}</div>
+        {items === null ? <CourseGridSkeleton withOverview={active === 'courses'} />
           : err ? <div className="st-empty"><LuCircleAlert /> Could not load courses. Please try again.</div>
             : filtered.length === 0 ? <div className="st-empty"><LuBookOpen /><b>{items.length ? 'No courses match your filters' : 'No courses available yet'}</b><span>{items.length ? 'Try clearing the search or a filter.' : 'Published study portals will appear here.'}</span></div>
               : active === 'courses' ? (

@@ -1,4 +1,4 @@
-/* Phase D — live chat (student floating box + teacher inbox). Uses the existing --c-* theme variables. */
+/* Live chat (student floating box + teacher inbox). Uses the existing --c-* theme variables. */
 .nt-badge.static { position: static; display: inline-block; margin-left: auto; box-shadow: none; }
 
 /* floating button: sits above the existing "go to top" button */

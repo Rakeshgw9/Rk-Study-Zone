@@ -27,7 +27,8 @@ service cloud.firestore {
 
     // ---- portals/{portalId} (details, status, counters) ----
     match /portals/{portalId} {
-      allow read: if signedIn();
+      // active portals are public (landing page course slider); drafts stay private
+      allow read: if signedIn() || resource.data.status == 'active';
       allow create: if isStaff() && request.resource.data.ownerId == request.auth.uid;
       // owners may edit their portal but can never hand it to someone else (ownerId is immutable for non-admins)
       allow update: if isAdmin() || (isStaff() && resource.data.ownerId == request.auth.uid

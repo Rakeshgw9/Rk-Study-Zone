@@ -1,4 +1,4 @@
-# Cleanup pass (after Phases A–D)
+# Cleanup pass
 
 ## Status (read first)
 Still no working `npm install` in the authoring sandbox (the registry cannot be reached), so `npm run lint` and `npm run build` have NOT been run on any phase. All source and test files parse; 119 unit tests run, 106 pass.

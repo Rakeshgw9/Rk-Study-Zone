@@ -79,17 +79,38 @@ export async function enrollmentStats(user) {
   }
 }
 
+// A short-lived cache so Landing / My Courses / the lesson do not each re-read the same document.
+// saveStudentData clears the entry, so progress shown after reading is always current.
+const DATA_TTL = 20000
+const dataCache = new Map()
+// Hand each caller its own copy (plain objects/arrays are copied, class instances such as Timestamps are kept as they are).
+const cloneData = (v) => {
+  if (Array.isArray(v)) return v.map(cloneData)
+  if (v && Object.getPrototypeOf(v) === Object.prototype) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, cloneData(x)]))
+  return v
+}
+
 export async function loadStudentData(uid, portalId) {
   if (!isFirebaseConfigured) return { ...emptyData(uid, portalId), ...readLS(sKey(uid, portalId), {}) }
-  try {
-    const s = await getDoc(doc(db, 'studentData', `${uid}_${portalId}`))
-    return s.exists() ? { ...emptyData(uid, portalId), ...fromFirestoreSafe(s.data()) } : emptyData(uid, portalId)
-  } catch (e) { console.warn(e); return emptyData(uid, portalId) }
+  const key = `${uid}_${portalId}`
+  const hit = dataCache.get(key)
+  if (hit && Date.now() - hit.at < DATA_TTL) return hit.promise.then(cloneData)
+  const promise = (async () => {
+    try {
+      const s = await getDoc(doc(db, 'studentData', key))
+      return s.exists() ? { ...emptyData(uid, portalId), ...fromFirestoreSafe(s.data()) } : emptyData(uid, portalId)
+    } catch (e) { console.warn(e); dataCache.delete(key); return emptyData(uid, portalId) }
+  })()
+  dataCache.set(key, { at: Date.now(), promise })
+  return promise.then(cloneData)
 }
 
 export async function saveStudentData(data) {
+  dataCache.delete(`${data.uid}_${data.portalId}`)
   if (!isFirebaseConfigured) { localStorage.setItem(sKey(data.uid, data.portalId), JSON.stringify(data)); return }
-  await setDoc(doc(db, 'studentData', `${data.uid}_${data.portalId}`), toFirestoreSafe({ ...data, updatedAt: serverTimestamp() }))
+  try {
+    await setDoc(doc(db, 'studentData', `${data.uid}_${data.portalId}`), toFirestoreSafe({ ...data, updatedAt: serverTimestamp() }))
+  } finally { dataCache.delete(`${data.uid}_${data.portalId}`) }
 }
 
 /** Writes the student's own progress summary onto their enrollment (so the teacher dashboard needs no extra reads). */

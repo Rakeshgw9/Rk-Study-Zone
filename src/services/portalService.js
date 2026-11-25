@@ -51,10 +51,20 @@ export function watchPortals(user, callback, onError) {
 }
 
 /** Active portals visible to students */
+// Landing, My Courses and notifications all need the same list: share one read for a short time.
+// Every write in this module clears it, so a teacher's change is never hidden behind the cache.
+const ACTIVE_TTL = 30000
+let activeCache = null
+const bustActive = () => { activeCache = null }
+
 export async function listActivePortals() {
   if (!isFirebaseConfigured) return sortNewest(demoRead().filter((p) => p.status === 'active'))
-  const snap = await getDocs(query(collection(db, 'portals'), where('status', '==', 'active')))
-  return sortNewest(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  if (activeCache && Date.now() - activeCache.at < ACTIVE_TTL) return activeCache.promise.then((l) => l.slice())
+  const promise = getDocs(query(collection(db, 'portals'), where('status', '==', 'active')))
+    .then((snap) => sortNewest(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+  activeCache = { at: Date.now(), promise }
+  promise.catch(() => { if (activeCache?.promise === promise) activeCache = null })
+  return promise.then((l) => l.slice())
 }
 
 export async function getPortal(id) {
@@ -72,6 +82,7 @@ export async function isSlugTaken(slug, ignoreId) {
 const coverPath = (uid, id) => `portal-covers/${uid}/${id}`
 
 export async function createPortal(data, coverFile, user, extra = {}) {
+  bustActive()
   const payload = {
     name: data.name.trim(), slug: data.slug.trim().toLowerCase(), description: (data.description || '').trim(),
     category: data.category || 'other', accessType: data.accessType || 'free', status: data.active ? 'active' : 'draft',
@@ -90,6 +101,7 @@ export async function createPortal(data, coverFile, user, extra = {}) {
 }
 
 export async function updatePortal(id, data, coverFile, user) {
+  bustActive()
   const patch = {
     name: data.name.trim(), slug: data.slug.trim().toLowerCase(), description: (data.description || '').trim(),
     category: data.category || 'other', accessType: data.accessType || 'free', status: data.active ? 'active' : 'draft',
@@ -100,6 +112,7 @@ export async function updatePortal(id, data, coverFile, user) {
 
 /** Low-level partial update */
 export async function patchPortal(id, patch) {
+  bustActive()
   if (!isFirebaseConfigured) { writeAll(demoRead().map((p) => (p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p))); return }
   await updateDoc(doc(db, 'portals', id), toFirestoreSafe({ ...patch, updatedAt: serverTimestamp() }))
 }
@@ -261,6 +274,7 @@ async function removeSubcollectionDocs(colName, portalId, subName) {
 
 /** Deletes the portal and its draft + published content (including chapter subcollections) */
 export async function deletePortal(id) {
+  bustActive()
   if (!isFirebaseConfigured) {
     localStorage.removeItem(sylKey(id))
     Object.keys(localStorage).filter((k) => k.startsWith(`rk_demo_syllabus_${id}_`)).forEach((k) => localStorage.removeItem(k))
@@ -299,6 +313,7 @@ export function computeStats(portals) {
   Used after a profile edit and as a one-time backfill for portals created before this field existed.
   Cost: 1 query read (own portals) + 1 write per portal whose copy is out of date, in batches of 400. */
 export async function syncOwnerIdentity(user, { onProgress } = {}) {
+  bustActive()
   if (!user?.uid) return 0
   const identity = ownerIdentity(user)
   if (!isFirebaseConfigured) {
@@ -323,6 +338,7 @@ export async function syncOwnerIdentity(user, { onProgress } = {}) {
 /** Teacher preference "notify me when a student submits an exam": copied to the teacher's portals so the student's
     browser knows whether to send the notice (students cannot read the teacher's private settings). */
 export async function syncExamFlag(user, value) {
+  bustActive()
   if (!user?.uid) return 0
   const flag = !!value
   if (!isFirebaseConfigured) {

@@ -1,4 +1,4 @@
-// Run with: node --import ./tests/_register.mjs --test tests/phaseC.test.mjs
+// Run with: node --import ./tests/_register.mjs --test tests/notifications.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { contentSignature, describeChange, diffSignatures, hashBlock, summarizeDiff } from '../src/lib/publishDiff.js'

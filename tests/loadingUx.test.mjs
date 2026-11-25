@@ -1,4 +1,4 @@
-// Run with: node --import ./tests/_register.mjs --test tests/phaseA.test.mjs
+// Run with: node --import ./tests/_register.mjs --test tests/loadingUx.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { accessNotice, appBaseUrl, buildShareModel, chapterLink, contentCounts, portalLink, unitLink } from '../src/lib/shareLinks.js'

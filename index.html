@@ -38,6 +38,21 @@
       }
     </style>
 
+    <!-- Apply the saved (or system) theme before first paint: no dark/light flash -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('rk_theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', t === 'light' ? '#f2f5fa' : '#030b1a');
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Local storage fallback -->
     <script>
       (function () {
